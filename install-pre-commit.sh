@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# -------------#
+# DECLARATIONS #
+# ------------ #
+
 # Color codes
 BOLD="\033[1m"
 RED="\033[0;31m"
@@ -12,6 +16,9 @@ OUTPUT_FILE=".git/hooks/pre-commit"
 
 REMOTE_LOCATION="./.remote-scripts"
 
+LAST_CONTENT=""
+declare -A DOWNLOADED_SOURCES
+
 log_script_execution() {
     local SCRIPT=$1
     local ARGS=$2
@@ -22,6 +29,73 @@ log_script_execution() {
     echo '    exit 1' >> "$OUTPUT_FILE"
     echo 'fi' >> "$OUTPUT_FILE"
     echo "printf \"\${BOLD}\\\\n <-----------------> \\\\n\${RESET}\"" >> "$OUTPUT_FILE"
+}
+
+fetch_write_remote_file() {
+    local FILE_URL=$1
+    local NAME=$2
+    local SOURCES=$3
+
+    echo -e "\nFetching ${NAME} from ${BOLD}'${FILE_URL}'${RESET}..."
+
+    CONTENT=$(curl -sf "$FILE_URL")
+    if [ $? -ne 0 ]; then
+        exit_error "Failed to retrieve script from GitHub."
+    fi
+
+    if [ $SOURCES -eq 1 ]; then
+        echo -e "Loading resources from ${BOLD}${NAME}${RESET}..."
+        load_remote_sources $PROJECT $TAG "${CONTENT}"
+        CONTENT="${LAST_CONTENT}"
+    fi
+
+    SCRIPT="${REMOTE_LOCATION}/${NAME}"
+
+    mkdir -p "$(dirname "$SCRIPT")"
+    touch "$SCRIPT"
+
+    > $SCRIPT
+    echo "$CONTENT" >> "${SCRIPT}"
+    chmod +x $SCRIPT
+}
+
+fetch_write_remote_script() {
+    local FILE_URL=$1
+    local NAME=$2
+    fetch_write_remote_file $FILE_URL $NAME 1
+}
+
+fetch_write_remote_source() {
+    local FILE_URL=$1
+    local NAME=$2
+    fetch_write_remote_file $FILE_URL $NAME 0 > /dev/null
+}
+
+load_remote_sources() {
+    local PROJECT=$1
+    local TAG=$2
+    local SCRIPT=$3
+    
+    # Loop through each line of the script
+    SOURCES=$(grep -oP '^\s*source\s+\K([^\s#]+)' <<< "$SCRIPT")
+    UPDATED_SCRIPT="${SCRIPT}"
+
+    for SOURCE in $SOURCES; do
+        FIX_SOURCE="${SOURCE#./}"
+        FILE_URL="https://raw.githubusercontent.com/${PROJECT}/refs/tags/${TAG}/${SOURCE}"
+
+        if [[ ! -v DOWNLOADED_SOURCES["$FIX_SOURCE"] ]]; then
+            DOWNLOADED_SOURCES["$FIX_SOURCE"]=1
+        fi
+
+        fetch_write_remote_source $FILE_URL $FIX_SOURCE
+
+        UPDATED_SOURCE="${REMOTE_LOCATION}/${FIX_SOURCE}"
+
+        UPDATED_SCRIPT=$(echo "$UPDATED_SCRIPT" | sed "s|$SOURCE|$UPDATED_SOURCE|")
+    done
+    
+    LAST_CONTENT="${UPDATED_SCRIPT}"
 }
 
 load_remote_scripts() {
@@ -48,22 +122,8 @@ load_remote_scripts() {
             exit_error "Currently, only GitHub repositories are supported."
         fi
 
-        echo -e "\nFetching ${NAME} from ${BOLD}'${FILE_URL}'${RESET}..."
-
-        CONTENT=$(curl -sf "$FILE_URL")
-        if [ $? -ne 0 ]; then
-            exit_error "Failed to retrieve script from GitHub."
-        fi
-
-        SCRIPT="${REMOTE_LOCATION}/${NAME}"
-
-        mkdir -p "${REMOTE_LOCATION}"
-        touch $SCRIPT
-
-        > $SCRIPT
-        echo "$CONTENT" >> "${SCRIPT}"
-        chmod +x $SCRIPT
-
+        fetch_write_remote_script $FILE_URL $NAME
+        
         log_script_execution "$SCRIPT" "$ARGS"
 
         echo -e "${GREEN}Script loadded successfully.${RESET}"
@@ -104,6 +164,11 @@ exit_error() {
     > $OUTPUT_FILE
     exit 1
 }
+
+
+# ------------------#
+# BUILDING PROCCESS #
+# ----------------- #
 
 > $OUTPUT_FILE
 
