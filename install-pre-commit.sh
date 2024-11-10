@@ -7,7 +7,7 @@ GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
 RESET="\033[0m"
 
-INPUT_FILE=".pre-commit-hooks.yaml"
+INPUT_FILE=".pre-commit-build.yaml"
 OUTPUT_FILE=".git/hooks/pre-commit"
 
 REMOTE_LOCATION="./.remote-scripts"
@@ -66,11 +66,13 @@ load_remote_scripts() {
 
         log_script_execution "$SCRIPT" "$ARGS"
 
-        echo -e "\n${GREEN}Script loadded succesfully.${RESET}"
+        echo -e "${GREEN}Script loadded successfully.${RESET}"
     done
 }
 
 load_local_scripts() {
+    echo -e "\n\n${YELLOW}Loading local scipts...${RESET}"
+
     SOURCES=$(yq eval '.hooks.local.sources[].path' ${INPUT_FILE})
     for SOURCE in $SOURCES; do
         echo "\n# Import ${SOURCE}" >> "$OUTPUT_FILE"
@@ -79,12 +81,21 @@ load_local_scripts() {
 
     SCRIPT_IDS=$(yq eval '.hooks.local.scripts[].id' ${INPUT_FILE})
     for SCRIPT_ID in $SCRIPT_IDS; do
-
         SCRIPT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .path" ${INPUT_FILE})
         ARGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .args[]" ${INPUT_FILE} | tr '\n' ' ')
 
+        echo -e "\nReading ${BOLD}'${SCRIPT}' script${RESET}..."
+
+        if [[ ! -f "$SCRIPT" ]]; then
+            echo "File does not exist."
+        fi
+
         log_script_execution "$SCRIPT" "$ARGS"
+
+        echo -e "${GREEN}Script loadded successfully.${RESET}"
     done
+
+     echo ""
 }
 
 exit_error() {
@@ -102,6 +113,7 @@ echo -e "\n# Color codes" >> "$OUTPUT_FILE"
 echo "BOLD=\"\\\033[1m\"" >> "$OUTPUT_FILE"
 echo "RESET=\"\\\033[0m\"" >> "$OUTPUT_FILE"
 
+echo -e "\n${BOLD}Building pre-commit hook...${RESET}\n"
 
 # --------------------#
 # LOAD REMOTE SCRIPTS #
@@ -120,3 +132,5 @@ echo -e "\n# <-- LOCAL SCRIPTS -->" >> "$OUTPUT_FILE"
 echo -e "\nprintf \"\${BOLD}\\\\nLocal scripts: \\\\n\${RESET}\"" >> "$OUTPUT_FILE"
 
 load_local_scripts
+
+echo -e "\n${BOLD}Hook has been building successfully.${RESET}\n"
