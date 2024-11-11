@@ -1,0 +1,19 @@
+#!/bin/bash
+
+WORKSPACE="."
+REMOTE_DIRECTORY=".remote-scripts"
+
+for ARG in "$@"; do
+  if [[ "$ARG" == --workspace=* ]]; then
+    WORKSPACE="${ARG#*=}"
+  fi
+done
+
+REMOTE_LOCATION="${WORKSPACE}/${REMOTE_DIRECTORY}"
+
+if [[ ! -f "$REMOTE_LOCATION" ]]; then
+    echo "Resources directory '${REMOTE_LOCATION}' does not exists."
+    exit 0
+fi
+
+rm -r $REMOTE_LOCATION

@@ -11,13 +11,30 @@ GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
 RESET="\033[0m"
 
-INPUT_FILE=".pre-commit-build.yaml"
-OUTPUT_FILE=".git/hooks/pre-commit"
+DEFAULT_INPUT_FILE=".pre-commit-build.yaml"
+DEFAULT_OUTPUT_FILE=".git/hooks/pre-commit"
 
 REMOTE_LOCATION="./.remote-scripts"
 
+WORKSPACE="."
+INPUT_FILE=$DEFAULT_INPUT_FILE
+OUTPUT_FILE=$DEFAULT_OUTPUT_FILE
+
 LAST_CONTENT=""
 declare -A DOWNLOADED_SOURCES
+
+for ARG in "$@"; do
+  if [[ "$ARG" == -t ]]; then
+    OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.output-test"
+    mkdir -p "$(dirname "$OUTPUT_FILE")"
+  elif [[ "$ARG" == --workspace=* ]]; then
+    WORKSPACE="${ARG#*=}"
+    INPUT_FILE="${WORKSPACE}/${DEFAULT_INPUT_FILE}"
+    OUTPUT_FILE="${WORKSPACE}/${DEFAULT_OUTPUT_FILE}"
+  elif [[ "$ARG" == --output=* ]]; then
+    OUTPUT_FILE="${ARG#*=}"
+  fi
+done
 
 log_script_execution() {
     local SCRIPT=$1
@@ -49,7 +66,7 @@ fetch_write_remote_file() {
         CONTENT="${LAST_CONTENT}"
     fi
 
-    SCRIPT="${REMOTE_LOCATION}/${NAME}"
+    SCRIPT="${WORKSPACE}/${REMOTE_LOCATION}/${NAME}"
 
     mkdir -p "$(dirname "$SCRIPT")"
     touch "$SCRIPT"
@@ -124,7 +141,7 @@ load_remote_scripts() {
 
         fetch_write_remote_script $FILE_URL $NAME
         
-        log_script_execution "$SCRIPT" "$ARGS"
+        log_script_execution "${REMOTE_LOCATION}/${NAME}" "$ARGS"
 
         echo -e "${GREEN}Script loadded successfully.${RESET}"
     done
@@ -146,9 +163,7 @@ load_local_scripts() {
 
         echo -e "\nReading ${BOLD}'${SCRIPT}' script${RESET}..."
 
-        if [[ ! -f "$SCRIPT" ]]; then
-            echo "File does not exist."
-        fi
+        file_must_exists "${WORKSPACE}/${SCRIPT}"
 
         log_script_execution "$SCRIPT" "$ARGS"
 
@@ -157,6 +172,14 @@ load_local_scripts() {
 
      echo ""
 }
+
+file_must_exists() {
+    local FILE=$1
+    if [[ ! -f "$FILE" ]]; then
+        exit_error "File does not exist."
+    fi
+}
+
 
 exit_error() {
     local MESSAGE=$1
@@ -169,6 +192,8 @@ exit_error() {
 # ------------------#
 # BUILDING PROCCESS #
 # ----------------- #
+
+file_must_exists $INPUT_FILE
 
 > $OUTPUT_FILE
 
