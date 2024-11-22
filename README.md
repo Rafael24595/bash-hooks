@@ -44,6 +44,9 @@ By default, the script will clean the resources directory of the workspace where
 >    - **_run-linter.sh_**: Runs **_golangci-lint_**  to find errors in staged Go files.
 >    - **_run-tests.sh_**: Run all Go tests.
 
+**Shell:**
+>    - **_run-linter.sh_**: Runs **_shellcheck_**  to find errors in staged Shell files.
+
 ## Dependencies
 
 - **yq** -  _v4.44.2_ (https://github.com/mikefarah/yq)

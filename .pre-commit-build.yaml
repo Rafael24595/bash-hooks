@@ -1,0 +1,7 @@
+hooks:
+  remote:
+
+  local:
+    scripts:
+      - id: run-linter
+        path: ./sh/sh/run-linter.sh
