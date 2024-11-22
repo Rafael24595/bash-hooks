@@ -12,11 +12,17 @@ then
 fi
 
 STAGED_FILES=$(git diff --name-only --cached --diff-filter=AM)
-STAGED_FILES=$(echo "$STAGED_FILES" | grep -E '(^[^.]+$|\.sh$)')
 # Check if no files are staged
 if [ -z "$STAGED_FILES" ]; then
     echo -e "${RED}\nNo files are staged for commit.${RESET}\n"
     exit 1
+fi
+
+STAGED_FILES=$(echo "$STAGED_FILES" | grep -E '(^[^.]+$|\.sh$)')
+# Check if no files are staged
+if [ -z "$STAGED_FILES" ]; then
+    echo -e "${GREEN}\nNo Shell files are staged for commit.${RESET}\n"
+    exit 0
 fi
 
 echo -e "${YELLOW}\nChecking stagged files...${RESET}"
