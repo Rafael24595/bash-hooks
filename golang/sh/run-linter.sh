@@ -1,6 +1,9 @@
 #!/bin/bash
 
+_VERSION="1.0.0"
+
 # Import color codes from colors.sh
+# shellcheck disable=SC1091
 source ./scripts/colors.sh
 
 # Ensure that golangci-lint is installed
@@ -25,7 +28,8 @@ fi
 # Convert to Unix format
 LINT_FILES=$(echo "$LINT_FILES" | sed 's/\\/\//g')
 
-echo -e "${YELLOW}\nError report:${RESET} \n\n$OUTPUT"
+echo -e "${YELLOW}\nError report:${RESET}"
+echo "$OUTPUT"
 
 STAGED_FILES=$(git diff --name-only --cached --diff-filter=AM)
 # Check if no files are staged
@@ -41,11 +45,11 @@ while IFS= read -r FILE; do
     # Convert to Unix format
     FILE=$(echo "$FILE" | sed 's/\\/\//g')
     # Check if the file is in the list of staged files
-    if grep -q "^$FILE$" <<< "$STAGED_FILES"; then
+    if grep -q "^$FILE$" <<< "$LINT_FILES"; then
         echo -e "File '${BOLD}$FILE${RESET}' contains errors."
         HAS_ERRORS=true
     fi
-done <<< "$LINT_FILES"
+done <<< "$STAGED_FILES"
 
 # Check the boolean variable after the loop
 if [ "$HAS_ERRORS" = true ]; then
