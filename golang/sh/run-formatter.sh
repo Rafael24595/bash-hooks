@@ -1,6 +1,9 @@
 #!/bin/bash
 
+_VERSION="1.0.0"
+
 # Import color codes from colors.sh
+# shellcheck disable=SC1091
 source ./scripts/colors.sh
 
 # Ensure gofmt is available

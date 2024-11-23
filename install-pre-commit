@@ -1,5 +1,8 @@
 #!/bin/bash
 
+_VERSION="0.0.3"
+_REPOSITORY="https://github.com/Rafael24595/bash-hooks"
+
 # -------------#
 # DECLARATIONS #
 # ------------ #
@@ -11,7 +14,7 @@ GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
 RESET="\033[0m"
 
-DEFAULT_INPUT_FILE=".pre-commit-build.yaml"
+DEFAULT_INPUT_FILE="pre-commit-build.yaml"
 DEFAULT_OUTPUT_FILE=".git/hooks/pre-commit"
 
 REMOTE_LOCATION="./.remote-scripts"
@@ -31,21 +34,39 @@ for ARG in "$@"; do
     WORKSPACE="${ARG#*=}"
     INPUT_FILE="${WORKSPACE}/${DEFAULT_INPUT_FILE}"
     OUTPUT_FILE="${WORKSPACE}/${DEFAULT_OUTPUT_FILE}"
+  elif [[ "$ARG" == --input=* ]]; then
+    INPUT_FILE="${ARG#*=}"
   elif [[ "$ARG" == --output=* ]]; then
     OUTPUT_FILE="${ARG#*=}"
+  elif [[ "$ARG" == --version* ]] || [[ "$ARG" == -v ]]; then
+    echo "install-pre-commit version $_VERSION ($_REPOSITORY)"
+    exit 0
+  elif [[ "$ARG" == --help* ]] || [[ "$ARG" == -h ]]; then
+    echo -e "\nUsage:"
+    echo -e "  install-pre-commit [flags]"
+    echo -e "\nFlags:"
+    echo -e "  -h --help             $YELLOW Help command. $RESET"
+    echo -e "  -v --version          $YELLOW Shows actual installer version. $RESET"
+    echo -e "  -t                    $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
+    echo -e "     --workspace=path   $YELLOW Defines the workspace where the script will be placed. $RESET"
+    echo -e "     --input=path       $YELLOW Defines the directory and name where the input file is located. $RESET"
+    echo -e "     --output=path      $YELLOW Defines directory and name where the script will be placed. $RESET"
+    echo ""
+    exit 0
   fi
 done
 
 log_script_execution() {
     local SCRIPT=$1
     local ARGS=$2
-
-    echo -e "\nprintf \"\${BOLD}\\\\nExecuting '${SCRIPT}' script...\${RESET}\\\\n\"" >> "$OUTPUT_FILE"
-    echo "$SCRIPT $ARGS" >> "$OUTPUT_FILE"
-    echo 'if [ $? -ne 0 ]; then' >> "$OUTPUT_FILE"
-    echo '    exit 1' >> "$OUTPUT_FILE"
-    echo 'fi' >> "$OUTPUT_FILE"
-    echo "printf \"\${BOLD}\\\\n <-----------------> \\\\n\${RESET}\"" >> "$OUTPUT_FILE"
+    {
+        echo -e "\nprintf \"\${BOLD}\\\\nExecuting '${SCRIPT}' script...\${RESET}\\\\n\"" 
+        echo "$SCRIPT $ARGS"
+        echo 'if [ $? -ne 0 ]; then'
+        echo '    exit 1'
+        echo 'fi'
+        echo -e "printf \"\${BOLD}\\\\n <-----------------> \\\\n\${RESET}\""
+    } >> "$OUTPUT_FILE"
 }
 
 fetch_write_remote_file() {
@@ -56,13 +77,13 @@ fetch_write_remote_file() {
     echo -e "\nFetching ${NAME} from ${BOLD}'${FILE_URL}'${RESET}..."
 
     CONTENT=$(curl -sf "$FILE_URL")
-    if [ $? -ne 0 ]; then
+    if ! CONTENT=$(curl -sf "$FILE_URL") ; then
         exit_error "Failed to retrieve script from GitHub."
     fi
 
-    if [ $SOURCES -eq 1 ]; then
+    if [ "$SOURCES" -eq 1 ]; then
         echo -e "Loading resources from ${BOLD}${NAME}${RESET}..."
-        load_remote_sources $PROJECT $TAG "${CONTENT}"
+        load_remote_sources "$PROJECT" "$TAG" "${CONTENT}"
         CONTENT="${LAST_CONTENT}"
     fi
 
@@ -71,21 +92,22 @@ fetch_write_remote_file() {
     mkdir -p "$(dirname "$SCRIPT")"
     touch "$SCRIPT"
 
-    > $SCRIPT
+    clean_output "$SCRIPT"
+
     echo "$CONTENT" >> "${SCRIPT}"
-    chmod +x $SCRIPT
+    chmod +x "$SCRIPT"
 }
 
 fetch_write_remote_script() {
     local FILE_URL=$1
     local NAME=$2
-    fetch_write_remote_file $FILE_URL $NAME 1
+    fetch_write_remote_file "$FILE_URL" "$NAME" 1
 }
 
 fetch_write_remote_source() {
     local FILE_URL=$1
     local NAME=$2
-    fetch_write_remote_file $FILE_URL $NAME 0 > /dev/null
+    fetch_write_remote_file "$FILE_URL" "$NAME" 0 > /dev/null
 }
 
 load_remote_sources() {
@@ -105,27 +127,27 @@ load_remote_sources() {
             DOWNLOADED_SOURCES["$FIX_SOURCE"]=1
         fi
 
-        fetch_write_remote_source $FILE_URL $FIX_SOURCE
+        fetch_write_remote_source "$FILE_URL" "$FIX_SOURCE"
 
         UPDATED_SOURCE="${REMOTE_LOCATION}/${FIX_SOURCE}"
 
-        UPDATED_SCRIPT=$(echo "$UPDATED_SCRIPT" | sed "s|$SOURCE|$UPDATED_SOURCE|")
+        UPDATED_SCRIPT=${UPDATED_SCRIPT//"$SOURCE"/"$UPDATED_SOURCE"}
     done
     
     LAST_CONTENT="${UPDATED_SCRIPT}"
 }
 
 load_remote_scripts() {
-    REPO_IDS=$(yq eval '.hooks.remote.repos[].id' ${INPUT_FILE})
+    REPO_IDS=$(yq eval '.hooks.remote.repos[].id' "${INPUT_FILE}")
 
     echo -e "\n${YELLOW}Loading remote scipts...${RESET}"
 
     for REPO_ID in $REPO_IDS; do
-        NAME=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .name" ${INPUT_FILE})
-        ORIGIN=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .origin" ${INPUT_FILE})
-        TAG=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .tag" ${INPUT_FILE})
-        TARGET=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .target" ${INPUT_FILE})
-        ARGS=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .args[]" ${INPUT_FILE} | tr '\n' ' ')
+        NAME=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .name" "${INPUT_FILE}")
+        ORIGIN=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .origin" "${INPUT_FILE}")
+        TAG=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .tag" "${INPUT_FILE}")
+        TARGET=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .target" "${INPUT_FILE}")
+        ARGS=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
         FILE_URL=""
 
         if [[ $NAME != *.sh ]]; then
@@ -139,7 +161,7 @@ load_remote_scripts() {
             exit_error "Currently, only GitHub repositories are supported."
         fi
 
-        fetch_write_remote_script $FILE_URL $NAME
+        fetch_write_remote_script "$FILE_URL" "$NAME"
         
         log_script_execution "${REMOTE_LOCATION}/${NAME}" "$ARGS"
 
@@ -150,16 +172,18 @@ load_remote_scripts() {
 load_local_scripts() {
     echo -e "\n\n${YELLOW}Loading local scipts...${RESET}"
 
-    SOURCES=$(yq eval '.hooks.local.sources[].path' ${INPUT_FILE})
+    SOURCES=$(yq eval '.hooks.local.sources[].path' "${INPUT_FILE}")
     for SOURCE in $SOURCES; do
-        echo "\n# Import ${SOURCE}" >> "$OUTPUT_FILE"
-        echo "source ${SOURCE}" >> "$OUTPUT_FILE"
+        {
+            echo -e "\n# Import ${SOURCE}"
+            echo "source ${SOURCE}"
+        } >> "$OUTPUT_FILE"
     done
 
-    SCRIPT_IDS=$(yq eval '.hooks.local.scripts[].id' ${INPUT_FILE})
+    SCRIPT_IDS=$(yq eval '.hooks.local.scripts[].id' "${INPUT_FILE}")
     for SCRIPT_ID in $SCRIPT_IDS; do
-        SCRIPT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .path" ${INPUT_FILE})
-        ARGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .args[]" ${INPUT_FILE} | tr '\n' ' ')
+        SCRIPT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .path" "${INPUT_FILE}")
+        ARGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
 
         echo -e "\nReading ${BOLD}'${SCRIPT}' script${RESET}..."
 
@@ -183,25 +207,30 @@ file_must_exists() {
 
 exit_error() {
     local MESSAGE=$1
-    echo -e "\n${RED}Error: ${MESSAGE}${RESET}\n"
-    > $OUTPUT_FILE
+    echo -e "\n${RED}Error: ${MESSAGE}${RESET}\n" >&2
+    clean_output "$OUTPUT_FILE"
     exit 1
 }
 
+clean_output() {
+    local FILE=$1
+    'true' > "$FILE"
+}
 
 # ------------------#
 # BUILDING PROCCESS #
 # ----------------- #
 
-file_must_exists $INPUT_FILE
+file_must_exists "$INPUT_FILE"
 
-> $OUTPUT_FILE
+clean_output "$OUTPUT_FILE"
 
-echo "#!/bin/sh" >> "$OUTPUT_FILE"
-
-echo -e "\n# Color codes" >> "$OUTPUT_FILE"
-echo "BOLD=\"\\\033[1m\"" >> "$OUTPUT_FILE"
-echo "RESET=\"\\\033[0m\"" >> "$OUTPUT_FILE"
+{
+    echo "#!/bin/sh"
+    echo -e "\n# Color codes"
+    echo -e "BOLD=\"\\\033[1m\""
+    echo -e "RESET=\"\\\033[0m\""
+} >> "$OUTPUT_FILE"
 
 echo -e "\n${BOLD}Building pre-commit hook...${RESET}\n"
 
