@@ -13,7 +13,7 @@ then
     exit 1
 fi
 
-STAGED_FILES=$(git diff --name-only --cached --diff-filter=AM)
+STAGED_FILES=$(git diff --name-only --cached --diff-filter=ACMR)
 # Check if no files are staged
 if [ -z "$STAGED_FILES" ]; then
     echo -e "${RED}\nNo files are staged for commit.${RESET}\n"
