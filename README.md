@@ -1,11 +1,28 @@
 ## Installer
 
-File name: **_installer-pre-commit_**
+File name: **_install-pre-commit_**
 
 By default, the script will be mounted in the same workspace where the installer is located.
 
 **Arguments:**
 
+- **Help**: Help command.
+
+    ````bash
+    $ ./install-pre-commit -h
+    ````
+    ````bash
+    $ ./install-pre-commit --help
+    ````
+
+- **Version**: Shows actual installer version.
+
+    ````bash
+    $ ./install-pre-commit -v
+    ````
+    ````bash
+    $ ./install-pre-commit --version
+    ````
 - **Test**: The script will be mounted inside the remote-scripts directory to prevent it from being used by Git.
 
     ````bash

@@ -4,6 +4,9 @@
 # DECLARATIONS #
 # ------------ #
 
+VERSION="0.0.3-SNAPSHOT"
+REPOSITORY="https://github.com/Rafael24595/bash-hooks"
+
 # Color codes
 BOLD="\033[1m"
 RED="\033[0;31m"
@@ -11,7 +14,7 @@ GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
 RESET="\033[0m"
 
-DEFAULT_INPUT_FILE=".pre-commit-build.yaml"
+DEFAULT_INPUT_FILE="pre-commit-build.yaml"
 DEFAULT_OUTPUT_FILE=".git/hooks/pre-commit"
 
 REMOTE_LOCATION="./.remote-scripts"
@@ -33,6 +36,20 @@ for ARG in "$@"; do
     OUTPUT_FILE="${WORKSPACE}/${DEFAULT_OUTPUT_FILE}"
   elif [[ "$ARG" == --output=* ]]; then
     OUTPUT_FILE="${ARG#*=}"
+  elif [[ "$ARG" == --version* ]] || [[ "$ARG" == -v ]]; then
+    echo "install-pre-commit version $VERSION ($REPOSITORY)"
+    exit 0
+  elif [[ "$ARG" == --help* ]] || [[ "$ARG" == -h ]]; then
+    echo -e "\nUsage:"
+    echo -e "  install-pre-commit [flags]"
+    echo -e "\nFlags:"
+    echo -e "  -h --help             $YELLOW Help command. $RESET"
+    echo -e "  -v --version          $YELLOW Shows actual installer version. $RESET"
+    echo -e "  -t                    $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
+    echo -e "     --workspace=path   $YELLOW Defines the workspace where the script will be placed. $RESET"
+    echo -e "     --output=path      $YELLOW Defines directory and name where the script will be placed. $RESET"
+    echo ""
+    exit 0
   fi
 done
 
