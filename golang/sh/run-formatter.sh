@@ -14,7 +14,7 @@ then
 fi
 
 # Get a list of Go files that are staged for commit
-STAGED_FILES=$(git diff --name-only --cached --diff-filter=AM)
+STAGED_FILES=$(git diff --name-only --cached --diff-filter=ACMR)
 
 # If no Go files are staged, exit early
 if [ -z "$STAGED_FILES" ]; then

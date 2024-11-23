@@ -10,7 +10,7 @@ MAX_SIZE=$1
 
 echo -e "${BOLD}\nChecking for files greater than ${YELLOW}$MAX_SIZE${RESET}${BOLD} bytes...${RESET}"
 
-large_files=$(git diff --cached --name-only --diff-filter=AM | while read -r file; do
+large_files=$(git diff --cached --name-only --diff-filter=ACMR | while read -r file; do
     if [ -f "$file" ] && [ "$(stat -c %s "$file")" -gt "$MAX_SIZE" ]; then
         echo "$file"
     fi
