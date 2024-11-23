@@ -1,11 +1,11 @@
 #!/bin/bash
 
+_VERSION="0.0.3-SNAPSHOT"
+_REPOSITORY="https://github.com/Rafael24595/bash-hooks"
+
 # -------------#
 # DECLARATIONS #
 # ------------ #
-
-VERSION="0.0.3-SNAPSHOT"
-REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 # Color codes
 BOLD="\033[1m"
@@ -34,10 +34,12 @@ for ARG in "$@"; do
     WORKSPACE="${ARG#*=}"
     INPUT_FILE="${WORKSPACE}/${DEFAULT_INPUT_FILE}"
     OUTPUT_FILE="${WORKSPACE}/${DEFAULT_OUTPUT_FILE}"
+  elif [[ "$ARG" == --input=* ]]; then
+    INPUT_FILE="${ARG#*=}"
   elif [[ "$ARG" == --output=* ]]; then
     OUTPUT_FILE="${ARG#*=}"
   elif [[ "$ARG" == --version* ]] || [[ "$ARG" == -v ]]; then
-    echo "install-pre-commit version $VERSION ($REPOSITORY)"
+    echo "install-pre-commit version $_VERSION ($_REPOSITORY)"
     exit 0
   elif [[ "$ARG" == --help* ]] || [[ "$ARG" == -h ]]; then
     echo -e "\nUsage:"
@@ -47,6 +49,7 @@ for ARG in "$@"; do
     echo -e "  -v --version          $YELLOW Shows actual installer version. $RESET"
     echo -e "  -t                    $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
     echo -e "     --workspace=path   $YELLOW Defines the workspace where the script will be placed. $RESET"
+    echo -e "     --input=path       $YELLOW Defines the directory and name where the input file is located. $RESET"
     echo -e "     --output=path      $YELLOW Defines directory and name where the script will be placed. $RESET"
     echo ""
     exit 0

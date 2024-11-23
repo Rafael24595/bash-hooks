@@ -33,6 +33,12 @@ By default, the script will be mounted in the same workspace where the installer
     ````bash
     $ ./install-pre-commit --workspace=../other_project/my_project
     ````
+- **Input**: Defines the directory and name where the input file is located.
+
+    ````bash
+    $ ./install-pre-commit --input=.test.yaml
+    ````
+
 - **Output**: Defines directory and name where the script will be placed.
 
     ````bash
