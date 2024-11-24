@@ -64,7 +64,7 @@ By default, the script will clean the resources directory of the workspace where
 **Golang:**
 >    - **_check-large-files.sh_**: Searches for large files based on a configurable number of bytes.
 >       - **Arguments**: 
->           - _File size in bytes._ 
+>           - _File size in bytes. Example: **5242880**_ 
 >    - **_run-formatter.sh_**: Format all Go files.
 >    - **_run-linter.sh_**: Runs **_golangci-lint_**  to find errors in staged Go files.
 >       - **Depencencies**: 
