@@ -56,7 +56,7 @@ By default, the script will clean the resources directory of the workspace where
 - Workspace: Defines the workspace resources directory that will be cleaned.
 
     ````bash
-    $ ./install-pre-commit --workspace=../other_project/my_project
+    $ ./clear-resources --workspace=../other_project/my_project
     ````
 
 ## Packages
