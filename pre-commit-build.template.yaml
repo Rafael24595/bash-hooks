@@ -1,7 +1,9 @@
+# installer: https://github.com/Rafael24595/bash-hooks/blob/dev/install-pre-commit
+
 hooks:
   remote:
     repos:
-      - id: check-large-files
+      - id: run-tests
         origin: https://github.com/Rafael24595/bash-hooks
         tag: 0.0.3
         target: golang/sh
@@ -10,7 +12,7 @@ hooks:
       - id: check-large-files
         origin: https://github.com/Rafael24595/bash-hooks
         tag: 0.0.3
-        target: golang/sh
+        target: tools/sh
         name: check-large-files.sh
         args:
           - 5242880
