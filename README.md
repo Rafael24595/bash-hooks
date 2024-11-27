@@ -79,3 +79,4 @@ By default, the script will clean the resources directory of the workspace where
 ## Dependencies
 
 - **yq** -  _v4.44.2_ (https://github.com/mikefarah/yq)
+    - **Notes**: **_snap_** installations of **_yq_** could not working as expected. See: [snap-notes](https://github.com/mikefarah/yq/#snap-notes)
