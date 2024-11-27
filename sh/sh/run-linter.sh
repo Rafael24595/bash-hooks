@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091
@@ -16,8 +16,8 @@ fi
 STAGED_FILES=$(git diff --name-only --cached --diff-filter=ACMR)
 # Check if no files are staged
 if [ -z "$STAGED_FILES" ]; then
-    echo -e "${RED}\nNo files are staged for commit.${RESET}\n"
-    exit 1
+    echo -e "${GREEN}\nNo files are staged for commit.${RESET}\n"
+    exit 0
 fi
 
 STAGED_FILES=$(echo "$STAGED_FILES" | grep -E '(^[^.]+$|\.sh$)')
