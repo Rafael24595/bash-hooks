@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091
@@ -11,6 +11,13 @@ if ! command -v golangci-lint &> /dev/null
 then
     echo -e "${RED}\ngolangci-lint could not be found. Please install it to proceed.${RESET}"
     exit 1
+fi
+
+STAGED_FILES=$(git diff --name-only --cached --diff-filter=ACMR)
+# Check if no files are staged
+if [ -z "$STAGED_FILES" ]; then
+    echo -e "${GREEN}\nNo valid files are staged for checking.${RESET}\n"
+    exit 0
 fi
 
 # Run golangci-lint across the entire repository (all Go files)
@@ -30,13 +37,6 @@ LINT_FILES=$(echo "$LINT_FILES" | sed 's/\\/\//g')
 
 echo -e "${YELLOW}\nError report:${RESET}"
 echo "$OUTPUT"
-
-STAGED_FILES=$(git diff --name-only --cached --diff-filter=ACMR)
-# Check if no files are staged
-if [ -z "$STAGED_FILES" ]; then
-    echo -e "${RED}\nNo files are staged for commit.${RESET}\n"
-    exit 1
-fi
 
 echo -e "${YELLOW}\nChecking stagged files:\n${RESET}"
 
