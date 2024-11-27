@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091
@@ -18,7 +18,7 @@ STAGED_FILES=$(git diff --name-only --cached --diff-filter=ACMR)
 
 # If no Go files are staged, exit early
 if [ -z "$STAGED_FILES" ]; then
-    echo -e "${RED}\nNo Go files staged for commit. Cannot formatting.${RESET}"
+    echo -e "${GREEN}\nNo Go files staged for commit. Cannot formatting.${RESET}"
     exit 0
 fi
 
