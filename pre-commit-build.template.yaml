@@ -5,13 +5,13 @@ hooks:
     repos:
       - id: run-tests
         origin: https://github.com/Rafael24595/bash-hooks
-        tag: 0.0.3
+        tag: 0.0.4
         target: golang/sh
         name: run-tests.sh
 
       - id: check-large-files
         origin: https://github.com/Rafael24595/bash-hooks
-        tag: 0.0.3
+        tag: 0.0.4
         target: tools/sh
         name: check-large-files.sh
         args:
