@@ -56,22 +56,27 @@ By default, the script will clean the resources directory of the workspace where
 - Workspace: Defines the workspace resources directory that will be cleaned.
 
     ````bash
-    $ ./install-pre-commit --workspace=../other_project/my_project
+    $ ./clear-resources --workspace=../other_project/my_project
     ````
 
 ## Packages
 
 **Golang:**
 >    - **_check-large-files.sh_**: Searches for large files based on a configurable number of bytes.
+>       - **Arguments**: 
+>           - _File size in bytes. Example: **5242880**_ 
 >    - **_run-formatter.sh_**: Format all Go files.
 >    - **_run-linter.sh_**: Runs **_golangci-lint_**  to find errors in staged Go files.
->       - **golangci-lint** -  _1.62.0_ (https://github.com/golangci/golangci-lint)
+>       - **Depencencies**: 
+>           - **_golangci-lint_** -  _1.62.0_ (https://github.com/golangci/golangci-lint)
 >    - **_run-tests.sh_**: Run all Go tests.
 
 **Shell:**
 >    - **_run-linter.sh_**: Runs **_shellcheck_**  to find errors in staged Shell files.
->       - **shellcheck** -  _0.8.0_ (https://www.shellcheck.net)
+>       - **Depencencies**: 
+>           - **_shellcheck_** -  _0.8.0_ (https://www.shellcheck.net)
 
 ## Dependencies
 
 - **yq** -  _v4.44.2_ (https://github.com/mikefarah/yq)
+    - **Notes**: **_snap_** installations of **_yq_** could not working as expected. See: [snap-notes](https://github.com/mikefarah/yq/#snap-notes)

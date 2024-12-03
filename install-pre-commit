@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.0.3"
+_VERSION="0.0.4"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 # -------------#
@@ -17,7 +17,9 @@ RESET="\033[0m"
 DEFAULT_INPUT_FILE="pre-commit-build.yaml"
 DEFAULT_OUTPUT_FILE=".git/hooks/pre-commit"
 
-REMOTE_LOCATION="./.remote-scripts"
+REMOTE_LOCATION=".remote-scripts"
+
+IS_TEST=false
 
 WORKSPACE="."
 INPUT_FILE=$DEFAULT_INPUT_FILE
@@ -26,14 +28,26 @@ OUTPUT_FILE=$DEFAULT_OUTPUT_FILE
 LAST_CONTENT=""
 declare -A DOWNLOADED_SOURCES
 
+COUNT_SOURCES=0
+COUNT_LOCAL=0
+COUNT_REMOTE=0
+
+LIST_SOURCES=""
+LIST_LOCAL=""
+LIST_REMOTE=""
+
+START_TIME=$(date +%s%3N)
+
+# ---------------- #
+# INPUT PROCESSING #
+# ---------------- #
+
 for ARG in "$@"; do
   if [[ "$ARG" == -t ]]; then
     OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.output-test"
-    mkdir -p "$(dirname "$OUTPUT_FILE")"
+    IS_TEST=true
   elif [[ "$ARG" == --workspace=* ]]; then
     WORKSPACE="${ARG#*=}"
-    INPUT_FILE="${WORKSPACE}/${DEFAULT_INPUT_FILE}"
-    OUTPUT_FILE="${WORKSPACE}/${DEFAULT_OUTPUT_FILE}"
   elif [[ "$ARG" == --input=* ]]; then
     INPUT_FILE="${ARG#*=}"
   elif [[ "$ARG" == --output=* ]]; then
@@ -55,6 +69,16 @@ for ARG in "$@"; do
     exit 0
   fi
 done
+
+INPUT_FILE="${WORKSPACE}/${INPUT_FILE}"
+OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
+
+mkdir -p "$(dirname "$OUTPUT_FILE")"
+chmod +x "$OUTPUT_FILE"
+
+# --------- #
+# FUNCTIONS #
+# --------- #
 
 log_script_execution() {
     local SCRIPT=$1
@@ -115,7 +139,6 @@ load_remote_sources() {
     local TAG=$2
     local SCRIPT=$3
     
-    # Loop through each line of the script
     SOURCES=$(grep -oP '^\s*source\s+\K([^\s#]+)' <<< "$SCRIPT")
     UPDATED_SCRIPT="${SCRIPT}"
 
@@ -138,9 +161,13 @@ load_remote_sources() {
 }
 
 load_remote_scripts() {
-    REPO_IDS=$(yq eval '.hooks.remote.repos[].id' "${INPUT_FILE}")
-
     echo -e "\n${YELLOW}Loading remote scipts...${RESET}"
+
+    REPO_IDS=$(yq eval '.hooks.remote.repos[].id' "${INPUT_FILE}")
+    if [[ -z "$REPO_IDS" ]]; then
+        echo -e "${GREEN}\nNo remote scripts found.${RESET}"
+        return
+    fi
 
     for REPO_ID in $REPO_IDS; do
         NAME=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .name" "${INPUT_FILE}")
@@ -166,35 +193,74 @@ load_remote_scripts() {
         log_script_execution "${REMOTE_LOCATION}/${NAME}" "$ARGS"
 
         echo -e "${GREEN}Script loadded successfully.${RESET}"
+
+        COUNT_REMOTE=$((COUNT_REMOTE + 1))
+        if [ -n "$LIST_REMOTE" ]; then
+            LIST_REMOTE+=", "
+        fi
+        LIST_REMOTE+="${GREEN}$NAME${RESET}"
     done
 }
 
-load_local_scripts() {
-    echo -e "\n\n${YELLOW}Loading local scipts...${RESET}"
+load_sources() {
+    echo -e "${YELLOW}\nLoading sources...${RESET}"
 
     SOURCES=$(yq eval '.hooks.local.sources[].path' "${INPUT_FILE}")
+    if [[ -z "$SOURCES" ]]; then
+        echo -e "${GREEN}\nNo remote scripts found.${RESET}"
+        return
+    fi
+
     for SOURCE in $SOURCES; do
         {
             echo -e "\n# Import ${SOURCE}"
             echo "source ${SOURCE}"
         } >> "$OUTPUT_FILE"
+
+        chmod +x "$SOURCE"
+
+        COUNT_SOURCES=$((COUNT_SOURCES + 1))
+        if [ -n "$LIST_SOURCES" ]; then
+            LIST_SOURCES+=", "
+        fi
+        LIST_SOURCES+="${GREEN}$SOURCE${RESET}"
     done
 
+    echo ""
+}
+
+load_local_scripts() {
+    echo -e "${YELLOW}\nLoading local scipts...${RESET}"
+
     SCRIPT_IDS=$(yq eval '.hooks.local.scripts[].id' "${INPUT_FILE}")
+    if [[ -z "$SCRIPT_IDS" ]]; then
+        echo -e "${GREEN}\nNo local scripts found.${RESET}"
+        return
+    fi
+
     for SCRIPT_ID in $SCRIPT_IDS; do
         SCRIPT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .path" "${INPUT_FILE}")
         ARGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
 
         echo -e "\nReading ${BOLD}'${SCRIPT}' script${RESET}..."
 
-        file_must_exists "${WORKSPACE}/${SCRIPT}"
+        LOCATION="${WORKSPACE}/${SCRIPT}"
+
+        file_must_exists "$LOCATION"
 
         log_script_execution "$SCRIPT" "$ARGS"
 
+        chmod +x "$LOCATION"
+
         echo -e "${GREEN}Script loadded successfully.${RESET}"
+
+        COUNT_LOCAL=$((COUNT_LOCAL + 1))
+        if [ -n "$LIST_LOCAL" ]; then
+            LIST_LOCAL+=", "
+        fi
+        LIST_LOCAL+="${GREEN}$SCRIPT_ID${RESET}"
     done
 
-     echo ""
 }
 
 file_must_exists() {
@@ -217,13 +283,25 @@ clean_output() {
     'true' > "$FILE"
 }
 
-# ------------------#
+block_separator() {
+    echo -e "\n------------------------------------------------------------------------------------------------"
+}
+
+# ----------------- #
 # BUILDING PROCCESS #
 # ----------------- #
 
 file_must_exists "$INPUT_FILE"
 
+if ! YAML_EVAL=$(yq eval '.' "$INPUT_FILE" 2>&1); then
+    exit_error "Invalid YAML format: $YAML_EVAL"
+fi
+
 clean_output "$OUTPUT_FILE"
+
+if [ "$IS_TEST" = true ]; then
+    echo -e "\n${YELLOW}${BOLD}Executing in test mode, script will be mounted in '${RESET}${GREEN}${BOLD}${OUTPUT_FILE}${RESET}${YELLOW}${BOLD}'.${RESET}"
+fi
 
 {
     echo "#!/bin/sh"
@@ -232,7 +310,21 @@ clean_output "$OUTPUT_FILE"
     echo -e "RESET=\"\\\033[0m\""
 } >> "$OUTPUT_FILE"
 
-echo -e "\n${BOLD}Building pre-commit hook...${RESET}\n"
+echo -e "\n${BOLD}Building pre-commit hook...${RESET}"
+
+block_separator
+
+
+# ------------ #
+# LOAD SOURCES #
+# ------------ #
+
+echo -e "\n# <-- SOURCES -->" >> "$OUTPUT_FILE"
+
+load_sources
+
+block_separator
+
 
 # --------------------#
 # LOAD REMOTE SCRIPTS #
@@ -243,7 +335,10 @@ echo -e "\nprintf \"\${BOLD}\\\\nRepository scripts: \\\\n\${RESET}\"" >> "$OUTP
 
 load_remote_scripts
 
-# -------------------#
+block_separator
+
+
+# ------------------ #
 # LOAD LOCAL SCRIPTS #
 # ------------------ #
 
@@ -252,4 +347,22 @@ echo -e "\nprintf \"\${BOLD}\\\\nLocal scripts: \\\\n\${RESET}\"" >> "$OUTPUT_FI
 
 load_local_scripts
 
+block_separator
+
+
+# ---------------- #
+# EXECUTION RESUME #
+# ---------------- #
+
+END_TIME=$(date +%s%3N)
+TIME=$((END_TIME - START_TIME))
+
 echo -e "\n${BOLD}Hook has been building successfully.${RESET}\n"
+
+echo -e "[${BOLD}$COUNT_REMOTE${RESET}] Remote scripts: $LIST_REMOTE"
+echo -e "[${BOLD}$COUNT_SOURCES${RESET}] Sources: $LIST_SOURCES"
+echo -e "[${BOLD}$COUNT_LOCAL${RESET}] Local scripts: $LIST_LOCAL"
+
+echo -e "\n${YELLOW}Execution time: ${TIME} ms${RESET}"
+
+echo ""
