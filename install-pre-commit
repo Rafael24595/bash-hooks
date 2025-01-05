@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.0.4"
+_VERSION="0.0.5-SNAPSHOT"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 # -------------#
@@ -38,9 +38,66 @@ LIST_REMOTE=""
 
 START_TIME=$(date +%s%3N)
 
+# -------------- #
+# MISC FUNCTIONS #
+# -------------- #
+
+exit_error() {
+    local MESSAGE=$1
+    echo -e "\n${RED}Error: ${MESSAGE}${RESET}\n" >&2
+    clean_output "$OUTPUT_FILE"
+    exit 1
+}
+
+clean_output() {
+    local FILE=$1
+    'true' > "$FILE"
+}
+
 # ---------------- #
 # INPUT PROCESSING #
 # ---------------- #
+
+update_installer() {
+    local VERSION=$1
+
+    REFERENCE="heads/main"
+    if [[ -z "$VERSION" ]]; then
+        VERSION="latest"
+    else
+        read -r -p "$(echo -e "\n${YELLOW}Be careful, the update flag was implemented in version 0.0.5. The command cannot be recognized in earlier versions. Do you want to continue? (y/n): ${RESET}")" RESPONSE
+        RESPONSE=$(echo "$RESPONSE" | tr '[:upper:]' '[:lower:]')
+
+        if [[ "$RESPONSE" == "yes" ]] || [[ "$RESPONSE" == "y" ]]; then
+            :
+        elif [[ "$RESPONSE" == "no" ]] || [[ "$RESPONSE" == "n" ]]; then
+            echo -e "\n${RED}The updating process has been canceled.${RESET}\n"
+            exit 0
+        fi
+
+        REFERENCE="tags/${VERSION}"
+    fi
+
+    FILE_URL="https://raw.githubusercontent.com/Rafael24595/bash-hooks/refs/${REFERENCE}/install-pre-commit"
+
+    echo -e "\nUpdating installer to ${BOLD}${VERSION}${RESET} version from ${BOLD}'${FILE_URL}'${RESET}..."
+
+    CONTENT=$(curl -sf "$FILE_URL")
+    if ! CONTENT=$(curl -sf "$FILE_URL") ; then
+        exit_error "Failed to retrieve script from GitHub."
+    fi
+
+    echo -e "${GREEN}Installer updated successfully.${RESET}\n"
+
+    SCRIPT="install-pre-commit"
+
+    touch "$SCRIPT"
+
+    clean_output "$SCRIPT"
+
+    echo "$CONTENT" >> "${SCRIPT}"
+    chmod +x "$SCRIPT"
+}
 
 for ARG in "$@"; do
   if [[ "$ARG" == -t ]]; then
@@ -61,11 +118,19 @@ for ARG in "$@"; do
     echo -e "\nFlags:"
     echo -e "  -h --help             $YELLOW Help command. $RESET"
     echo -e "  -v --version          $YELLOW Shows actual installer version. $RESET"
+    echo -e "  -u --update=tag       $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
     echo -e "  -t                    $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
     echo -e "     --workspace=path   $YELLOW Defines the workspace where the script will be placed. $RESET"
     echo -e "     --input=path       $YELLOW Defines the directory and name where the input file is located. $RESET"
     echo -e "     --output=path      $YELLOW Defines directory and name where the script will be placed. $RESET"
     echo ""
+    exit 0
+  elif [[ "$ARG" == --update=* ]]; then
+    VERSION="${ARG#*=}"
+    update_installer "$VERSION"
+    exit 0
+  elif [[ "$ARG" == --update* ]] || [[ "$ARG" == -u ]]; then
+    update_installer ""
     exit 0
   fi
 done
@@ -268,19 +333,6 @@ file_must_exists() {
     if [[ ! -f "$FILE" ]]; then
         exit_error "File does not exist."
     fi
-}
-
-
-exit_error() {
-    local MESSAGE=$1
-    echo -e "\n${RED}Error: ${MESSAGE}${RESET}\n" >&2
-    clean_output "$OUTPUT_FILE"
-    exit 1
-}
-
-clean_output() {
-    local FILE=$1
-    'true' > "$FILE"
 }
 
 block_separator() {

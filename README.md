@@ -1,3 +1,20 @@
+## Configuration file
+
+The configuration file must be named [**_pre-commit-build.yaml_**](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml) by default and placed in the root of the project workspace with the following structure:
+
+- Root tag "**_hooks_**" (_Required_):
+    - For remote scripts, use a "**_remote_**" tag that contains a list of "**_repos_**" with the following structure:
+        - **id**: The ID of the script.
+        - **origin**: The URL of the GitHub repository.
+        - **tag**: The tag of the repository.
+        - **target**: The path that contains the script.
+        - **name**: The name of the script.
+    - For local scripts, use a "**_local_**" tag that contains a list of "**_scripts_**" with the following structure:
+        - **id**: The ID of the script.
+        - **path**: The path that contains the script.
+
+**_See the template example:_** [**_pre-commit-build.template.yaml_**](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml)
+
 ## Installer
 
 File name: **_install-pre-commit_**
@@ -13,6 +30,15 @@ By default, the script will be mounted in the same workspace where the installer
     ````
     ````bash
     $ ./install-pre-commit --help
+    ````
+
+- **Update**: Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version.
+
+    ````bash
+    $ ./install-pre-commit -u
+    ````
+    ````bash
+    $ ./install-pre-commit --update=tag
     ````
 
 - **Version**: Shows actual installer version.
