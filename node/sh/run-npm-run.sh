@@ -17,7 +17,7 @@ echo -e "${BOLD}\nExecuting npm command...\n${RESET}"
 
 COMMAND=$1 
 
-npm run $COMMAND
+npm run "${COMMAND}"
 
 # Capture the exit code of `npm run`
 TEST_EXIT_CODE=$?

@@ -88,18 +88,26 @@ By default, the script will clean the resources directory of the workspace where
 ## Packages
 
 **Golang:**
->    - **_check-large-files.sh_**: Searches for large files based on a configurable number of bytes.
+>    - **check-large-files.sh**: Searches for large files based on a configurable number of bytes.
 >       - **Arguments**: 
 >           - _File size in bytes. Example: **5242880**_ 
->    - **_run-formatter.sh_**: Format all Go files.
->    - **_run-linter.sh_**: Runs **_golangci-lint_**  to find errors in staged Go files.
->       - **Depencencies**: 
+>    - **run-formatter.sh**: Format all Go files.
+>    - **run-linter.sh**: Runs **_golangci-lint_**  to find errors in staged Go files.
+>       - **Dependencies**: 
 >           - **_golangci-lint_** -  _1.62.0_ (https://github.com/golangci/golangci-lint)
->    - **_run-tests.sh_**: Run all Go tests.
+>    - **run-tests.sh**: Run all Go tests.
+
+**Node:**
+>    - **run-npm-run.sh**: Executes an npm script command based on a configurable argument.
+>       - **Arguments**: 
+>           - _Script command. Example: **build**, **dev**, **test**..._
+>       - **Dependencies**: 
+>           - **_node_** -  – tested with Node.js v18+, but should work with all versions (https://nodejs.org/en)
+
 
 **Shell:**
->    - **_run-linter.sh_**: Runs **_shellcheck_**  to find errors in staged Shell files.
->       - **Depencencies**: 
+>    - **run-linter.sh**: Runs **_shellcheck_**  to find errors in staged Shell files.
+>       - **Dependencies**: 
 >           - **_shellcheck_** -  _0.8.0_ (https://www.shellcheck.net)
 
 ## Dependencies
