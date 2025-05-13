@@ -1,3 +1,20 @@
+## Configuration file
+
+The configuration file must be named [**_pre-commit-build.yaml_**](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml) by default and placed in the root of the project workspace with the following structure:
+
+- Root tag "**_hooks_**" (_Required_):
+    - For remote scripts, use a "**_remote_**" tag that contains a list of "**_repos_**" with the following structure:
+        - **id**: The ID of the script.
+        - **origin**: The URL of the GitHub repository.
+        - **tag**: The tag of the repository.
+        - **target**: The path that contains the script.
+        - **name**: The name of the script.
+    - For local scripts, use a "**_local_**" tag that contains a list of "**_scripts_**" with the following structure:
+        - **id**: The ID of the script.
+        - **path**: The path that contains the script.
+
+**_See the template example:_** [**_pre-commit-build.template.yaml_**](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml)
+
 ## Installer
 
 File name: **_install-pre-commit_**
@@ -13,6 +30,15 @@ By default, the script will be mounted in the same workspace where the installer
     ````
     ````bash
     $ ./install-pre-commit --help
+    ````
+
+- **Update**: Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version.
+
+    ````bash
+    $ ./install-pre-commit -u
+    ````
+    ````bash
+    $ ./install-pre-commit --update=tag
     ````
 
 - **Version**: Shows actual installer version.
@@ -62,18 +88,26 @@ By default, the script will clean the resources directory of the workspace where
 ## Packages
 
 **Golang:**
->    - **_check-large-files.sh_**: Searches for large files based on a configurable number of bytes.
+>    - **check-large-files.sh**: Searches for large files based on a configurable number of bytes.
 >       - **Arguments**: 
 >           - _File size in bytes. Example: **5242880**_ 
->    - **_run-formatter.sh_**: Format all Go files.
->    - **_run-linter.sh_**: Runs **_golangci-lint_**  to find errors in staged Go files.
->       - **Depencencies**: 
+>    - **run-formatter.sh**: Format all Go files.
+>    - **run-linter.sh**: Runs **_golangci-lint_**  to find errors in staged Go files.
+>       - **Dependencies**: 
 >           - **_golangci-lint_** -  _1.62.0_ (https://github.com/golangci/golangci-lint)
->    - **_run-tests.sh_**: Run all Go tests.
+>    - **run-tests.sh**: Run all Go tests.
+
+**Node:**
+>    - **run-npm-run.sh**: Executes an npm script command based on a configurable argument.
+>       - **Arguments**: 
+>           - _Script command. Example: **build**, **dev**, **test**..._
+>       - **Dependencies**: 
+>           - **_node_** -  – tested with Node.js v18+, but should work with all versions (https://nodejs.org/en)
+
 
 **Shell:**
->    - **_run-linter.sh_**: Runs **_shellcheck_**  to find errors in staged Shell files.
->       - **Depencencies**: 
+>    - **run-linter.sh**: Runs **_shellcheck_**  to find errors in staged Shell files.
+>       - **Dependencies**: 
 >           - **_shellcheck_** -  _0.8.0_ (https://www.shellcheck.net)
 
 ## Dependencies
