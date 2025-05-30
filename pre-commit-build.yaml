@@ -3,7 +3,7 @@ hooks:
 
   local:
     scripts:
-      - id: check-stagged
-        path: ./tools/sh/check-stagged.sh
+      - id: check-staged
+        path: ./tools/sh/check-staged.sh
       - id: run-linter
         path: ./sh/sh/run-linter.sh

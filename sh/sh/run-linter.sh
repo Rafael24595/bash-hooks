@@ -27,7 +27,7 @@ if [ -z "$STAGED_FILES" ]; then
     exit 0
 fi
 
-echo -e "${YELLOW}\nChecking stagged files...${RESET}"
+echo -e "${YELLOW}\nChecking staged files...${RESET}"
 
 HAS_ERRORS=false
 while IFS= read -r FILE; do

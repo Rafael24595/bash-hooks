@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 _VERSION="1.0.0"
 
@@ -17,13 +18,13 @@ ensure_go_project() {
 # Check if Go is installed
 ensure_go_installed() {
     if ! command -v go &> /dev/null; then
-        echo -e "${RED}\ngo could not be found. Please install Go to proceed.${RESET}"
+        echo -e "${RED}\nGo is not installed or not found in your system's PATH. Please install Go to proceed.${RESET}"
         exit 1
     fi
 }
 
 # Check if there are any Go files staged
-ensure_go_stagged() {
+ensure_go_staged() {
     staged_go_files=$(git diff --cached --name-only -- '*.go')
     if [ -z "$staged_go_files" ]; then
         echo -e "${YELLOW}\nNo Go files are staged, skipping the hook...${RESET}"
@@ -34,6 +35,6 @@ ensure_go_stagged() {
 # Check if it is a Go context
 ensure_go_context() {
     ensure_go_project
-    ensure_go_stagged
+    ensure_go_staged
     ensure_go_installed
 }
