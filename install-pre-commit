@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 _VERSION="0.5.0-SNAPSHOT"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
@@ -14,14 +15,17 @@ GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
 RESET="\033[0m"
 
+DEFAULT_HOOK_MODE="pre-commit"
 DEFAULT_INPUT_FILE="pre-commit-build.yaml"
-DEFAULT_OUTPUT_FILE=".git/hooks/pre-commit"
+DEFAULT_OUTPUT_FILE=".git/hooks/${DEFAULT_HOOK_MODE}"
 
 REMOTE_LOCATION=".remote-scripts"
 
 IS_TEST=false
 
 WORKSPACE="."
+
+HOOK_MODE=$DEFAULT_HOOK_MODE
 INPUT_FILE=$DEFAULT_INPUT_FILE
 OUTPUT_FILE=$DEFAULT_OUTPUT_FILE
 
@@ -100,8 +104,16 @@ update_installer() {
 }
 
 for ARG in "$@"; do
-  if [[ "$ARG" == -t ]]; then
-    OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.output-test"
+  if [[ "$ARG" == --mode=* ]]; then
+    ARG="${ARG#--mode=}"
+    if [[ "$ARG" == "pre_commit" ]]; then
+        HOOK_MODE="pre-commit"
+    elif [[ "$ARG" == "pre_push" ]]; then
+        HOOK_MODE="pre-push"
+    fi
+    OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
+  elif [[ "$ARG" == -t ]]; then
+    OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.${HOOK_MODE}"
     IS_TEST=true
   elif [[ "$ARG" == --workspace=* ]]; then
     WORKSPACE="${ARG#*=}"
@@ -123,6 +135,7 @@ for ARG in "$@"; do
     echo -e "     --workspace=path   $YELLOW Defines the workspace where the script will be placed. $RESET"
     echo -e "     --input=path       $YELLOW Defines the directory and name where the input file is located. $RESET"
     echo -e "     --output=path      $YELLOW Defines directory and name where the script will be placed. $RESET"
+    echo -e "     --mode=type        $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
     echo ""
     exit 0
   elif [[ "$ARG" == --update=* ]]; then
@@ -139,6 +152,7 @@ INPUT_FILE="${WORKSPACE}/${INPUT_FILE}"
 OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
+touch "$OUTPUT_FILE"
 chmod +x "$OUTPUT_FILE"
 
 # --------- #
