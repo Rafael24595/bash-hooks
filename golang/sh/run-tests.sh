@@ -1,6 +1,7 @@
 #!/bin/bash
+set -e
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091

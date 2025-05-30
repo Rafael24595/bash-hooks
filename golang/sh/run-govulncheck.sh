@@ -1,26 +1,31 @@
 #!/bin/bash
+set -e
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091
 source ./scripts/colors.sh
+# Import Go utils.
+# shellcheck disable=SC1091
+source ./golang/sh/utils-golang.sh
 
-AUTO_INSTALL=false
+INSTALL=false
 
 # Parse args
 for arg in "$@"; do
     if [ "$arg" == "--install" ] || [ "$arg" == "-i" ]; then
-        AUTO_INSTALL=true
+        INSTALL=true
     fi
 done
 
 # Ensure that govulncheck is installed
 if ! command -v govulncheck &> /dev/null
 then
-    if $AUTO_INSTALL; then
+    if $INSTALL; then
         echo -e "${GREEN}Installing govulncheck...${RESET}"
-        eval "go install golang.org/x/vuln/cmd/govulncheck@latest"
+        ensure_go_installed
+        go install golang.org/x/vuln/cmd/govulncheck@latest
         echo -e "${GREEN}govulncheck installed.${RESET}"
     else
         echo -e "${RED}\ngovulncheck could not be found. Please install it to proceed.${RESET}"
