@@ -96,6 +96,7 @@ By default, the script will clean the resources directory of the workspace where
 **Golang:**
 >    - **check-go-context.sh**: Executes functions to validate whether the current project is a valid Go project.
 >       - **Flags**: 
+>           - _If none are selected, all checks will be executed_
 >           - **--project**: Verifies if this is a Go project
 >           - **--staged**: Checks for staged Go files
 >           - **--install**: Verifies if Go is installed
