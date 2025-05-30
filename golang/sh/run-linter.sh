@@ -1,16 +1,33 @@
 #!/bin/bash
+set -e
 
-_VERSION="1.0.1"
+_VERSION="1.0.3"
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091
 source ./scripts/colors.sh
 
+INSTALL=false
+
+# Parse args
+for arg in "$@"; do
+    if [ "$arg" == "--install" ] || [ "$arg" == "-i" ]; then
+        INSTALL=true
+    fi
+done
+
 # Ensure that golangci-lint is installed
 if ! command -v golangci-lint &> /dev/null
 then
-    echo -e "${RED}\ngolangci-lint could not be found. Please install it to proceed.${RESET}"
-    exit 1
+    if $INSTALL; then
+        echo -e "${GREEN}Installing golangci-lint...${RESET}"
+        ensure_go_installed
+        go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        echo -e "${GREEN}golangci-lint installed.${RESET}"
+    else
+        echo -e "${RED}\ngolangci-lint could not be found. Please install it to proceed.${RESET}"
+        exit 1
+    fi
 fi
 
 STAGED_FILES=$(git diff --name-only --cached --diff-filter=ACMR)
@@ -38,7 +55,7 @@ LINT_FILES=$(echo "$LINT_FILES" | sed 's/\\/\//g')
 echo -e "${YELLOW}\nError report:${RESET}"
 echo "$OUTPUT"
 
-echo -e "${YELLOW}\nChecking stagged files:\n${RESET}"
+echo -e "${YELLOW}\nChecking staged files:\n${RESET}"
 
 HAS_ERRORS=false
 while IFS= read -r FILE; do

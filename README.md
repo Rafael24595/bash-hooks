@@ -71,6 +71,12 @@ By default, the script will be mounted in the same workspace where the installer
     $ ./install-pre-commit --output=.test.sh
     ````
 
+- **Mode**: Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push.
+
+    ````bash
+    $ ./install-pre-commit --mode=pre_commit
+    ````
+
 ## Cleaner
 
 File name: **_clear-resources_**
@@ -88,14 +94,27 @@ By default, the script will clean the resources directory of the workspace where
 ## Packages
 
 **Golang:**
+>    - **check-go-context.sh**: Executes functions to validate whether the current project is a valid Go project.
+>       - **Flags**: 
+>           - _If none are selected, all checks will be executed_
+>           - **--project**: Verifies if this is a Go project
+>           - **--staged**: Checks for staged Go files
+>           - **--install**: Verifies if Go is installed
 >    - **check-large-files.sh**: Searches for large files based on a configurable number of bytes.
 >       - **Arguments**: 
 >           - _File size in bytes. Example: **5242880**_ 
 >    - **run-formatter.sh**: Format all Go files.
 >    - **run-linter.sh**: Runs **_golangci-lint_**  to find errors in staged Go files.
+>       - **Flags**: 
+>           - **--install**: Installs the latest version of golangci-lint if it is not already 
 >       - **Dependencies**: 
 >           - **_golangci-lint_** -  _1.62.0_ (https://github.com/golangci/golangci-lint)
 >    - **run-tests.sh**: Run all Go tests.
+>    - **run-govulncheck.sh**: Executes govulncheck to check for vulnerabilities in dependencies.
+>       - **Flags**: 
+>           - **--install**: Installs the latest version of govulncheck if it is not already installed
+>       - **Dependencies**: 
+>           - **_govulncheck_** -  _v1.1.4_ (https://github.com/golang/vuln)
 
 **Node:**
 >    - **run-npm-run.sh**: Executes an npm script command based on a configurable argument.
