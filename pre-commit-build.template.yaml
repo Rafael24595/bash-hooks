@@ -3,15 +3,27 @@
 hooks:
   remote:
     repos:
+      - id: check-go-context
+        origin: https://github.com/Rafael24595/bash-hooks
+        tag: 0.6.1
+        target: golang/sh
+        name: check-go-context.sh
+        expect: false
+        return: true
+        flags:
+          - project
+          - staged
+          - install
+
       - id: run-tests
         origin: https://github.com/Rafael24595/bash-hooks
-        tag: 0.0.4
+        tag: 0.6.1
         target: golang/sh
         name: run-tests.sh
 
       - id: check-large-files
         origin: https://github.com/Rafael24595/bash-hooks
-        tag: 0.0.4
+        tag: 0.6.1
         target: tools/sh
         name: check-large-files.sh
         args:

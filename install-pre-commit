@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-_VERSION="0.6.0-SNAPSHOT"
+_VERSION="0.6.1-SNAPSHOT"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 # -------------#
@@ -161,12 +161,32 @@ chmod +x "$OUTPUT_FILE"
 
 log_script_execution() {
     local SCRIPT=$1
-    local ARGS=$2
+    local EXPECT=$2
+    local RETURN=$3
+    local ARGS=$4
+    local FLAGS=$5
+
+    local LOG_DIRECTION="ne"
+    local LOG_RETURN=1
+
+    if [[ "$EXPECT" == "true" ]]; then
+        LOG_DIRECTION="eq"
+    fi
+
+    if [[ "$RETURN" == "true" ]]; then
+        LOG_RETURN=0
+    fi
+
+    local LOG_FLAGS=""
+    for flag in $FLAGS; do
+        LOG_FLAGS+=" --$flag"
+    done
+
     {
         echo -e "\nprintf \"\${BOLD}\\\\nExecuting '${SCRIPT}' script...\${RESET}\\\\n\"" 
-        echo "$SCRIPT $ARGS"
-        echo 'if [ $? -ne 0 ]; then'
-        echo '    exit 1'
+        echo "$SCRIPT $ARGS $LOG_FLAGS"
+        echo "if [ \$? -${LOG_DIRECTION} 0 ]; then"
+        echo "    exit ${LOG_RETURN}"
         echo 'fi'
         echo -e "printf \"\${BOLD}\\\\n <-----------------> \\\\n\${RESET}\""
     } >> "$OUTPUT_FILE"
@@ -253,7 +273,12 @@ load_remote_scripts() {
         ORIGIN=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .origin" "${INPUT_FILE}")
         TAG=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .tag" "${INPUT_FILE}")
         TARGET=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .target" "${INPUT_FILE}")
+        
+        EXPECT=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .expect" "${INPUT_FILE}")
+        RETURN=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .return" "${INPUT_FILE}")
+
         ARGS=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
+        FLAGS=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .flags[]" "${INPUT_FILE}" | tr '\n' ' ')
         FILE_URL=""
 
         if [[ $NAME != *.sh ]]; then
@@ -269,7 +294,7 @@ load_remote_scripts() {
 
         fetch_write_remote_script "$FILE_URL" "$NAME"
         
-        log_script_execution "${REMOTE_LOCATION}/${NAME}" "$ARGS"
+        log_script_execution "${REMOTE_LOCATION}/${NAME}" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS"
 
         echo -e "${GREEN}Script loadded successfully.${RESET}"
 
@@ -319,7 +344,12 @@ load_local_scripts() {
 
     for SCRIPT_ID in $SCRIPT_IDS; do
         SCRIPT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .path" "${INPUT_FILE}")
+
+        EXPECT=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .expect" "${INPUT_FILE}")
+        RETURN=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .return" "${INPUT_FILE}")
+
         ARGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
+        FLAGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .flags[]" "${INPUT_FILE}" | tr '\n' ' ')
 
         echo -e "\nReading ${BOLD}'${SCRIPT}' script${RESET}..."
 
@@ -327,7 +357,7 @@ load_local_scripts() {
 
         file_must_exists "$LOCATION"
 
-        log_script_execution "$SCRIPT" "$ARGS"
+        log_script_execution "$SCRIPT" "$EXPECT" "$EXIT" "$ARGS" "$FLAGS"
 
         chmod +x "$LOCATION"
 

@@ -9,9 +9,17 @@ The configuration file must be named [**_pre-commit-build.yaml_**](https://githu
         - **tag**: The tag of the repository.
         - **target**: The path that contains the script.
         - **name**: The name of the script.
+        - **expect**: The expected result of the script — `true` for exit code `0`, `false` for exit code `< 1`.
+        - **return**: The actual return value of the script. `true` for `1`, `false` for `0`.
+        - **flags**: The flags passed to the script, defined without the `--` prefix.
+        - **args**: The arguments passed to the script.
     - For local scripts, use a "**_local_**" tag that contains a list of "**_scripts_**" with the following structure:
         - **id**: The ID of the script.
         - **path**: The path that contains the script.
+        - **expect**: The expected result of the script — `true` for exit code `0`, `false` for exit code `< 1`.
+        - **return**: The actual return value of the script. `true` for `1`, `false` for `0`.
+        - **flags**: The flags passed to the script, defined without the `--` prefix.
+        - **args**: The arguments passed to the script.
 
 **_See the template example:_** [**_pre-commit-build.template.yaml_**](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml)
 
@@ -96,7 +104,7 @@ By default, the script will clean the resources directory of the workspace where
 **Golang:**
 >    - **check-go-context.sh**: Executes functions to validate whether the current project is a valid Go project.
 >       - **Flags**: 
->           - _If none are selected, all checks will be executed_
+>           - **If none are selected, all checks will be executed**
 >           - **--project**: Verifies if this is a Go project
 >           - **--staged**: Checks for staged Go files
 >           - **--install**: Verifies if Go is installed

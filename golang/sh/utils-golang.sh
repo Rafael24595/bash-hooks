@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091
@@ -10,8 +10,8 @@ source ./scripts/colors.sh
 # Check if inside a Go project
 ensure_go_project() {
     if [ ! -f "go.mod" ]; then
-        echo -e "${YELLOW}\nNot a Go project: go.mod not found, skipping the hook...${RESET}"
-        exit 0
+        echo -e "${YELLOW}\nNot a Go project: go.mod not found.${RESET}"
+        exit 1
     fi
 }
 
@@ -27,8 +27,8 @@ ensure_go_installed() {
 ensure_go_staged() {
     staged_go_files=$(git diff --cached --name-only -- '*.go')
     if [ -z "$staged_go_files" ]; then
-        echo -e "${YELLOW}\nNo Go files are staged, skipping the hook...${RESET}"
-        exit 0
+        echo -e "${YELLOW}\nNo Go files are staged.${RESET}"
+        exit 1
     fi
 }
 
