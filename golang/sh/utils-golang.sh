@@ -25,7 +25,7 @@ ensure_go_installed() {
 
 # Check if there are any Go files staged
 ensure_go_staged() {
-    staged_go_files=$(git diff --cached --name-only -- '*.go')
+    staged_go_files=$(git diff --cached --name-only -- "*.go")
     if [ -z "$staged_go_files" ]; then
         echo -e "${YELLOW}\nNo Go files are staged.${RESET}"
         exit 1
