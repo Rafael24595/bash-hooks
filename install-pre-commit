@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.6.2-SNAPSHOT"
+_VERSION="0.6.3-SNAPSHOT"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 # -------------#
