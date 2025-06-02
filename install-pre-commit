@@ -1,7 +1,6 @@
 #!/bin/bash
-set -e
 
-_VERSION="0.6.1-SNAPSHOT"
+_VERSION="0.6.2-SNAPSHOT"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 # -------------#
@@ -195,7 +194,6 @@ log_script_execution() {
 fetch_write_remote_file() {
     local FILE_URL=$1
     local NAME=$2
-    local SOURCES=$3
 
     echo -e "\nFetching ${NAME} from ${BOLD}'${FILE_URL}'${RESET}..."
 
@@ -204,11 +202,8 @@ fetch_write_remote_file() {
         exit_error "Failed to retrieve script from GitHub."
     fi
 
-    if [ "$SOURCES" -eq 1 ]; then
-        echo -e "Loading resources from ${BOLD}${NAME}${RESET}..."
-        load_remote_sources "$PROJECT" "$TAG" "${CONTENT}"
-        CONTENT="${LAST_CONTENT}"
-    fi
+    load_remote_sources "$NAME" "$PROJECT" "$TAG" "${CONTENT}"
+    CONTENT="${LAST_CONTENT}"
 
     SCRIPT="${WORKSPACE}/${REMOTE_LOCATION}/${NAME}"
 
@@ -221,39 +216,40 @@ fetch_write_remote_file() {
     chmod +x "$SCRIPT"
 }
 
-fetch_write_remote_script() {
-    local FILE_URL=$1
-    local NAME=$2
-    fetch_write_remote_file "$FILE_URL" "$NAME" 1
-}
-
-fetch_write_remote_source() {
-    local FILE_URL=$1
-    local NAME=$2
-    fetch_write_remote_file "$FILE_URL" "$NAME" 0 > /dev/null
-}
-
 load_remote_sources() {
-    local PROJECT=$1
-    local TAG=$2
-    local SCRIPT=$3
+    local NAME=$1
+    local PROJECT=$2
+    local TAG=$3
+    local SCRIPT=$4
     
+    local SOURCES
     SOURCES=$(grep -oP '^\s*source\s+\K([^\s#]+)' <<< "$SCRIPT")
-    UPDATED_SCRIPT="${SCRIPT}"
+    if [[ -z "$SOURCES" ]]; then
+        LAST_CONTENT="${SCRIPT}"
+        return
+    fi
+
+    echo -e "\nLoading resources from ${BOLD}${NAME}${RESET}..."
+
+    local UPDATED_SCRIPT="${SCRIPT}"
 
     for SOURCE in $SOURCES; do
-        FIX_SOURCE="${SOURCE#./}"
-        FILE_URL="https://raw.githubusercontent.com/${PROJECT}/refs/tags/${TAG}/${SOURCE}"
+        local LOCAL_SOURCE="$SOURCE"
+        local FIX_SOURCE="${LOCAL_SOURCE#./}"
+
+        local FILE_URL="https://raw.githubusercontent.com/${PROJECT}/refs/tags/${TAG}/${LOCAL_SOURCE}"
 
         if [[ ! -v DOWNLOADED_SOURCES["$FIX_SOURCE"] ]]; then
+            echo -e "Source found: ${FIX_SOURCE}"
+            fetch_write_remote_file "$FILE_URL" "$FIX_SOURCE" 0
             DOWNLOADED_SOURCES["$FIX_SOURCE"]=1
+        else
+            echo -e "Source found: ${FIX_SOURCE} [${GREEN}cached${RESET}]"
         fi
 
-        fetch_write_remote_source "$FILE_URL" "$FIX_SOURCE"
+        local UPDATED_SOURCE="${REMOTE_LOCATION}/${FIX_SOURCE}"
 
-        UPDATED_SOURCE="${REMOTE_LOCATION}/${FIX_SOURCE}"
-
-        UPDATED_SCRIPT=${UPDATED_SCRIPT//"$SOURCE"/"$UPDATED_SOURCE"}
+        UPDATED_SCRIPT=${UPDATED_SCRIPT//"$LOCAL_SOURCE"/"$UPDATED_SOURCE"}
     done
     
     LAST_CONTENT="${UPDATED_SCRIPT}"
@@ -292,7 +288,7 @@ load_remote_scripts() {
             exit_error "Currently, only GitHub repositories are supported."
         fi
 
-        fetch_write_remote_script "$FILE_URL" "$NAME"
+        fetch_write_remote_file "$FILE_URL" "$NAME"
         
         log_script_execution "${REMOTE_LOCATION}/${NAME}" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS"
 
