@@ -248,7 +248,6 @@ load_remote_sources() {
         fi
 
         local UPDATED_SOURCE="${REMOTE_LOCATION}/${FIX_SOURCE}"
-        echo "${LOCAL_SOURCE} -> ${UPDATED_SOURCE}"
 
         UPDATED_SCRIPT=${UPDATED_SCRIPT//"$LOCAL_SOURCE"/"$UPDATED_SOURCE"}
     done
