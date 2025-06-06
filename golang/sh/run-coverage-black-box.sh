@@ -16,15 +16,26 @@ fi
 
 VERBOSE=false
 SUCCESS_EMPTY=false
+INVALID_EMPTY=false
+PACKAGE_LIST=()
 
 # Parse flags
-for arg in "$@"; do
-    case "$arg" in
+for ARG in "$@"; do
+    case "$ARG" in
         --verbose | -v)
             VERBOSE=true
             ;;
         --success-empty | -se)
             SUCCESS_EMPTY=true
+            ;;
+        --invalid-empty | -ie)
+            INVALID_EMPTY=true
+            ;;
+        --package=*)
+            PACKAGE_LIST+=("${ARG#*=}")
+            ;;
+        --p=*)
+            PACKAGE_LIST+=("${ARG#*=}")
             ;;
     esac
 done
@@ -36,24 +47,33 @@ fi
 
 echo -e "\nRunning tests to calculate coverage...\n"
 
-while read -r PACKAGE_TEST; do
-    PACKAGE_SOURCE=${PACKAGE_TEST/test/src}
+process_package() {
+    local PACKAGE_TEST="$1"
+    local PACKAGE_SOURCE=${PACKAGE_TEST/test/src}
 
-    if [ ! -d "$PACKAGE_SOURCE" ] || ! find "$PACKAGE_SOURCE" -maxdepth 1 -type f | read; then
-        continue
+    if [ ! -d "$PACKAGE_SOURCE" ] || ! find "$PACKAGE_SOURCE" -maxdepth 1 -type f -name "*.go" | grep -q .; then
+        return
+    fi
+
+    TEST_TARGET=""
+    if $INVALID_EMPTY || find "$PACKAGE_TEST" -maxdepth 1 -type f -name "*.go" | grep -q .; then
+        TEST_TARGET="./${PACKAGE_TEST#./}"
     fi
 
     echo -e "${GREEN}Testing '$PACKAGE_TEST' against '$PACKAGE_SOURCE'${RESET}\n"
 
     echo -e "${YELLOW}Global view of coverage:${RESET}"
-    go test -coverpkg=./${PACKAGE_SOURCE#./} -coverprofile=tmp_coverage.out ./${PACKAGE_TEST#./}
+    go test -coverpkg=./${PACKAGE_SOURCE#./} -coverprofile=tmp_coverage.out "$TEST_TARGET"
+    EXIT_CODE_GLOBAL=$?
     if $VERBOSE; then
         echo -e "\n${YELLOW}Detailed coverage report:${RESET}"
         go tool cover -func=tmp_coverage.out
+        EXIT_CODE_VERBOSE=$?
     fi
     
-    EXIT_CODE=$?
-    if [ $EXIT_CODE -ne 0 ]; then
+    EXIT_CODE_GLOBAL=${EXIT_CODE_GLOBAL:-0}
+    EXIT_CODE_VERBOSE=${EXIT_CODE_VERBOSE:-0}
+    if [ "$EXIT_CODE_GLOBAL" -ne 0 ] || [ "$EXIT_CODE_VERBOSE" -ne 0 ]; then
         echo -e "${RED}Something went wrong during testing coverage calculation.${RESET}"
         exit $EXIT_CODE
     fi
@@ -68,7 +88,28 @@ while read -r PACKAGE_TEST; do
     fi
 
     echo -e "\n"
-done < <(find ./test -type d)
+}
+
+if [[ ${#PACKAGE_LIST[@]} -gt 0 ]]; then
+    for PACKAGE_TEST in "${PACKAGE_LIST[@]}"; do
+        process_package "$PACKAGE_TEST"
+        EXIT_CODE=$?
+        if [ $EXIT_CODE -ne 0 ]; then
+            echo -e "${RED}Something went wrong during testing coverage calculation.${RESET}"
+            exit $EXIT_CODE
+        fi
+    done
+else
+    while read -r PACKAGE_TEST; do
+        process_package "$PACKAGE_TEST"
+        EXIT_CODE=$?
+        if [ $EXIT_CODE -ne 0 ]; then
+            echo -e "${RED}Something went wrong during testing coverage calculation.${RESET}"
+            exit $EXIT_CODE
+        fi
+    done < <(find ./test -type d)
+fi
+
 
 if [ ! -f coverage.out ]; then
     if $SUCCESS_EMPTY; then
