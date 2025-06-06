@@ -85,6 +85,12 @@ By default, the script will be mounted in the same workspace where the installer
     $ ./install-pre-commit --mode=pre_commit
     ````
 
+- **Pull**: Downloads the specified remote script at the given version.
+
+    ````bash
+    $ ./install-pre-commit --pull=golang/sh/run-govulncheck.sh:0.6.3
+    ````
+
 ## Cleaner
 
 File name: **_clear-resources_**
@@ -123,6 +129,14 @@ By default, the script will clean the resources directory of the workspace where
 >           - **--install**: Installs the latest version of govulncheck if it is not already installed
 >       - **Dependencies**: 
 >           - **_govulncheck_** -  _v1.1.4_ (https://github.com/golang/vuln)
+>    - **run-coverage-black-box.sh**: Runs black-box tests on Go packages and calculates code coverage. By default, it checks whether the test directory structure matches the source structure and verifies if the current test coverage meets or exceeds the specified minimum.
+>       - **Flags**: 
+>           - **--verbose** | **--v** : Displays the coverage details.
+>           - **--success-empty** | **--se** : Treats the absence of tests as a successful result.
+>           - **--invalid-empty** | **--ie** : Treats packages with no found tests as a valid result.
+>           - **--package=`<pkg>`** | **--p=`<pkg>`** : Manually specify one or more packages to analyze. Can be repeated to include multiple packages.
+>       - **Arguments**: 
+>           - _Minimum coverage percentage. Example: **80.0**_ 
 
 **Node:**
 >    - **run-npm-run.sh**: Executes an npm script command based on a configurable argument.
