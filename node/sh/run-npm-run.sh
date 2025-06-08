@@ -1,6 +1,8 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.1.0"
+_PACKAGE="run-npm-run"
+_DETAILS="Executes an npm script command based on a configurable argument."
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091

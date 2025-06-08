@@ -1,6 +1,8 @@
 #!/bin/bash
 
-_VERSION="1.0.2"
+_VERSION="1.1.0"
+_PACKAGE="run-govulncheck"
+_DETAILS="Executes govulncheck to check for vulnerabilities in dependencies."
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091

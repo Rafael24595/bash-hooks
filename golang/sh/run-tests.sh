@@ -1,6 +1,8 @@
 #!/bin/bash
 
-_VERSION="1.0.2"
+_VERSION="1.1.0"
+_PACKAGE="run-tests"
+_DETAILS="Run all Go tests."
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091

@@ -1,6 +1,8 @@
 #!/bin/bash
 
-_VERSION="1.0.1"
+_VERSION="1.1.0"
+_PACKAGE="run-linter"
+_DETAILS="Runs shellcheck to find errors in staged Shell files."
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091

@@ -1,6 +1,8 @@
 #!/bin/bash
 
-_VERSION="1.0.4"
+_VERSION="1.1.0"
+_PACKAGE="run-linter"
+_DETAILS="Runs golangci-lint to find errors in staged Go files."
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091

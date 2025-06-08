@@ -1,6 +1,8 @@
 #!/bin/bash
 
-_VERSION="1.0.3"
+_VERSION="1.1.0"
+_PACKAGE="run-formatter"
+_DETAILS="Format all Go files."
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091

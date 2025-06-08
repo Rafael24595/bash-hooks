@@ -41,6 +41,16 @@ LIST_REMOTE=""
 
 START_TIME=$(date +%s%3N)
 
+# ---------------- #
+# STARTUP VARIBLES #
+# ---------------- #
+
+EXECUTE_UPDATE=false
+SOURCE_UPDATE_VERSION=""
+
+EXECUTE_PULL=false
+SOURCE_PULL_PACKAGE=""
+
 # -------------- #
 # MISC FUNCTIONS #
 # -------------- #
@@ -57,94 +67,87 @@ clean_output() {
     'true' > "$FILE"
 }
 
+print_help() {
+    echo -e "\nUsage:"
+    echo -e "  install-pre-commit [flags]"
+    echo -e "\nFlags:"
+    echo -e "  -h --help                   $YELLOW Help command. $RESET"
+    echo -e "  -v --version                $YELLOW Shows actual installer version. $RESET"
+    echo -e "  -u --update=tag             $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
+    echo -e "  -t                          $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
+    echo -e "     --workspace=path         $YELLOW Defines the workspace where the script will be placed. $RESET"
+    echo -e "     --input=path             $YELLOW Defines the directory and name where the input file is located. $RESET"
+    echo -e "     --output=path            $YELLOW Defines directory and name where the script will be placed. $RESET"
+    echo -e "     --mode=type              $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
+    echo -e "     --pull=target/file:tag   $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
+    echo ""
+}
+
+execution_resume() {
+    END_TIME=$(date +%s%3N)
+    TIME=$((END_TIME - START_TIME))
+
+    echo -e "[${BOLD}$COUNT_REMOTE${RESET}] Remote scripts: $LIST_REMOTE"
+    echo -e "[${BOLD}$COUNT_SOURCES${RESET}] Sources: $LIST_SOURCES"
+    echo -e "[${BOLD}$COUNT_LOCAL${RESET}] Local scripts: $LIST_LOCAL"
+
+    echo -e "\n${YELLOW}Execution time: ${TIME} ms${RESET}"
+
+    echo ""
+}
+
 # ---------------- #
 # INPUT PROCESSING #
 # ---------------- #
 
-update_installer() {
-    local VERSION=$1
-
-    REFERENCE="heads/main"
-    if [[ -z "$VERSION" ]]; then
-        VERSION="latest"
-    else
-        read -r -p "$(echo -e "\n${YELLOW}Be careful, the update flag was implemented in version 0.0.5. The command cannot be recognized in earlier versions. Do you want to continue? (y/n): ${RESET}")" RESPONSE
-        RESPONSE=$(echo "$RESPONSE" | tr '[:upper:]' '[:lower:]')
-
-        if [[ "$RESPONSE" == "yes" ]] || [[ "$RESPONSE" == "y" ]]; then
-            :
-        elif [[ "$RESPONSE" == "no" ]] || [[ "$RESPONSE" == "n" ]]; then
-            echo -e "\n${RED}The updating process has been canceled.${RESET}\n"
-            exit 0
-        fi
-
-        REFERENCE="tags/${VERSION}"
-    fi
-
-    FILE_URL="https://raw.githubusercontent.com/Rafael24595/bash-hooks/refs/${REFERENCE}/install-pre-commit"
-
-    echo -e "\nUpdating installer to ${BOLD}${VERSION}${RESET} version from ${BOLD}'${FILE_URL}'${RESET}..."
-
-    CONTENT=$(curl -sf "$FILE_URL")
-    if ! CONTENT=$(curl -sf "$FILE_URL") ; then
-        exit_error "Failed to retrieve script from GitHub."
-    fi
-
-    echo -e "${GREEN}Installer updated successfully.${RESET}\n"
-
-    SCRIPT="install-pre-commit"
-
-    touch "$SCRIPT"
-
-    clean_output "$SCRIPT"
-
-    echo "$CONTENT" >> "${SCRIPT}"
-    chmod +x "$SCRIPT"
-}
-
 for ARG in "$@"; do
-  if [[ "$ARG" == --mode=* ]]; then
-    ARG="${ARG#--mode=}"
-    if [[ "$ARG" == "pre_commit" ]]; then
-        HOOK_MODE="pre-commit"
-    elif [[ "$ARG" == "pre_push" ]]; then
-        HOOK_MODE="pre-push"
-    fi
-    OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
-  elif [[ "$ARG" == -t ]]; then
-    OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.${HOOK_MODE}"
-    IS_TEST=true
-  elif [[ "$ARG" == --workspace=* ]]; then
-    WORKSPACE="${ARG#*=}"
-  elif [[ "$ARG" == --input=* ]]; then
-    INPUT_FILE="${ARG#*=}"
-  elif [[ "$ARG" == --output=* ]]; then
-    OUTPUT_FILE="${ARG#*=}"
-  elif [[ "$ARG" == --version* ]] || [[ "$ARG" == -v ]]; then
-    echo "install-pre-commit version $_VERSION ($_REPOSITORY)"
-    exit 0
-  elif [[ "$ARG" == --help* ]] || [[ "$ARG" == -h ]]; then
-    echo -e "\nUsage:"
-    echo -e "  install-pre-commit [flags]"
-    echo -e "\nFlags:"
-    echo -e "  -h --help             $YELLOW Help command. $RESET"
-    echo -e "  -v --version          $YELLOW Shows actual installer version. $RESET"
-    echo -e "  -u --update=tag       $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
-    echo -e "  -t                    $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
-    echo -e "     --workspace=path   $YELLOW Defines the workspace where the script will be placed. $RESET"
-    echo -e "     --input=path       $YELLOW Defines the directory and name where the input file is located. $RESET"
-    echo -e "     --output=path      $YELLOW Defines directory and name where the script will be placed. $RESET"
-    echo -e "     --mode=type        $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
-    echo ""
-    exit 0
-  elif [[ "$ARG" == --update=* ]]; then
-    VERSION="${ARG#*=}"
-    update_installer "$VERSION"
-    exit 0
-  elif [[ "$ARG" == --update* ]] || [[ "$ARG" == -u ]]; then
-    update_installer ""
-    exit 0
-  fi
+  case "$ARG" in
+    --mode=*)
+      ARG="${ARG#--mode=}"
+      case "$ARG" in
+        "pre_commit")
+          HOOK_MODE="pre-commit"
+          ;;
+        "pre_push")
+          HOOK_MODE="pre-push"
+          ;;
+      esac
+      OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
+      ;;
+    -t)
+      OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.${HOOK_MODE}"
+      IS_TEST=true
+      ;;
+    --workspace=*)
+      WORKSPACE="${ARG#*=}"
+      ;;
+    --input=*)
+      INPUT_FILE="${ARG#*=}"
+      ;;
+    --output=*)
+      OUTPUT_FILE="${ARG#*=}"
+      ;;
+    --pull=*)
+      EXECUTE_PULL=true
+      SOURCE_PULL_PACKAGE="${ARG#--pull=}"
+      REMOTE_LOCATION="."
+      ;;
+    --version* | -v)
+      echo "install-pre-commit version $_VERSION ($_REPOSITORY)"
+      exit 0
+      ;;
+    --update=*)
+      SOURCE_UPDATE_VERSION="${ARG#*=}"
+      EXECUTE_UPDATE=true
+      ;;
+    --update* | -u)
+      EXECUTE_UPDATE=true
+      ;;
+    --help* | -h)
+      print_help
+      exit 0
+      ;;
+  esac
 done
 
 INPUT_FILE="${WORKSPACE}/${INPUT_FILE}"
@@ -192,15 +195,23 @@ log_script_execution() {
 }
 
 fetch_write_remote_file() {
-    local FILE_URL=$1
-    local NAME=$2
+    local PROJECT=$1
+    local FILE_URL=$2
+    local NAME=$3
+
+    echo "$FILE_URL"
 
     echo -e "\nFetching ${NAME} from ${BOLD}'${FILE_URL}'${RESET}..."
 
-    CONTENT=$(curl -sf "$FILE_URL")
     if ! CONTENT=$(curl -sf "$FILE_URL") ; then
         exit_error "Failed to retrieve script from GitHub."
     fi
+
+    COUNT_REMOTE=$((COUNT_REMOTE + 1))
+    if [ -n "$LIST_REMOTE" ]; then
+        LIST_REMOTE+=", "
+    fi
+    LIST_REMOTE+="${GREEN}$NAME${RESET}"
 
     load_remote_sources "$NAME" "$PROJECT" "$TAG" "${CONTENT}"
     CONTENT="${LAST_CONTENT}"
@@ -241,7 +252,7 @@ load_remote_sources() {
 
         if [[ ! -v DOWNLOADED_SOURCES["$FIX_SOURCE"] ]]; then
             echo -e "Source found: ${FIX_SOURCE}"
-            fetch_write_remote_file "$FILE_URL" "$FIX_SOURCE" 0
+            fetch_write_remote_file "$PROJECT" "$FILE_URL" "$FIX_SOURCE" 0
             DOWNLOADED_SOURCES["$FIX_SOURCE"]=1
         else
             echo -e "Source found: ${FIX_SOURCE} [${GREEN}cached${RESET}]"
@@ -281,6 +292,7 @@ load_remote_scripts() {
             exit_error "Only Bash scripts are supported so far."
         fi
 
+        local PROJECT=""
         if [[ "$ORIGIN" == https://github.com* ]]; then
             PROJECT="${ORIGIN#https://github.com/}"
             FILE_URL="https://raw.githubusercontent.com/${PROJECT}/refs/tags/${TAG}/${TARGET}/${NAME}"
@@ -288,17 +300,11 @@ load_remote_scripts() {
             exit_error "Currently, only GitHub repositories are supported."
         fi
 
-        fetch_write_remote_file "$FILE_URL" "$NAME"
+        fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME"
         
         log_script_execution "${REMOTE_LOCATION}/${NAME}" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS"
 
         echo -e "${GREEN}Script loadded successfully.${RESET}"
-
-        COUNT_REMOTE=$((COUNT_REMOTE + 1))
-        if [ -n "$LIST_REMOTE" ]; then
-            LIST_REMOTE+=", "
-        fi
-        LIST_REMOTE+="${GREEN}$NAME${RESET}"
     done
 }
 
@@ -380,8 +386,85 @@ block_separator() {
 }
 
 # ----------------- #
+# STARTUP FUNCTIONS #
+# ----------------- #
+
+update_installer() {
+    local VERSION=$1
+
+    REFERENCE="heads/main"
+    if [[ -z "$VERSION" ]]; then
+        VERSION="latest"
+    else
+        read -r -p "$(echo -e "\n${YELLOW}Be careful, the update flag was implemented in version 0.0.5. The command cannot be recognized in earlier versions. Do you want to continue? (y/n): ${RESET}")" RESPONSE
+        RESPONSE=$(echo "$RESPONSE" | tr '[:upper:]' '[:lower:]')
+
+        if [[ "$RESPONSE" == "yes" ]] || [[ "$RESPONSE" == "y" ]]; then
+            :
+        elif [[ "$RESPONSE" == "no" ]] || [[ "$RESPONSE" == "n" ]]; then
+            echo -e "\n${RED}The updating process has been canceled.${RESET}\n"
+            exit 0
+        fi
+
+        REFERENCE="tags/${VERSION}"
+    fi
+
+    FILE_URL="https://raw.githubusercontent.com/Rafael24595/bash-hooks/refs/${REFERENCE}/install-pre-commit"
+
+    echo -e "\nUpdating installer to ${BOLD}${VERSION}${RESET} version from ${BOLD}'${FILE_URL}'${RESET}..."
+
+    CONTENT=$(curl -sf "$FILE_URL")
+    if ! CONTENT=$(curl -sf "$FILE_URL") ; then
+        exit_error "Failed to retrieve script from GitHub."
+    fi
+
+    echo -e "${GREEN}Installer updated successfully.${RESET}\n"
+
+    SCRIPT="install-pre-commit"
+
+    touch "$SCRIPT"
+
+    clean_output "$SCRIPT"
+
+    echo "$CONTENT" >> "${SCRIPT}"
+    chmod +x "$SCRIPT"
+}
+
+pull_source() {
+    local SOURCE=$1
+
+    local TAG="${SOURCE##*:}"
+    local URL="${SOURCE%%:*}"
+    local NAME="${URL##*/}"
+    local TARGET="${URL%/*}"
+
+    local PROJECT="Rafael24595/bash-hooks"
+
+    local FILE_URL="https://raw.githubusercontent.com/${PROJECT}/refs/tags/${TAG}/${TARGET}/${NAME}"
+
+    echo -e "\n${GREEN}Downloading script ${NAME}...${RESET}\n"
+
+    fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME" 0
+}
+
+# ----------------- #
 # BUILDING PROCCESS #
 # ----------------- #
+
+if $EXECUTE_UPDATE; then
+    update_installer "$SOURCE_UPDATE_VERSION"
+    exit 0
+fi
+
+if $EXECUTE_PULL; then
+    pull_source "$SOURCE_PULL_PACKAGE"
+
+    echo -e "\n${BOLD}The package has been downloaded successfully.${RESET}\n"
+
+    execution_resume
+
+    exit 0
+fi
 
 file_must_exists "$INPUT_FILE"
 
@@ -446,15 +529,6 @@ block_separator
 # EXECUTION RESUME #
 # ---------------- #
 
-END_TIME=$(date +%s%3N)
-TIME=$((END_TIME - START_TIME))
-
 echo -e "\n${BOLD}Hook has been building successfully.${RESET}\n"
 
-echo -e "[${BOLD}$COUNT_REMOTE${RESET}] Remote scripts: $LIST_REMOTE"
-echo -e "[${BOLD}$COUNT_SOURCES${RESET}] Sources: $LIST_SOURCES"
-echo -e "[${BOLD}$COUNT_LOCAL${RESET}] Local scripts: $LIST_LOCAL"
-
-echo -e "\n${YELLOW}Execution time: ${TIME} ms${RESET}"
-
-echo ""
+execution_resume

@@ -1,6 +1,8 @@
 #!/bin/bash
 
-_VERSION="1.0.1"
+_VERSION="1.1.0"
+_PACKAGE="check-go-context"
+_DETAILS="Executes functions to validate whether the current project is a valid Go project."
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091
