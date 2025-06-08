@@ -1,6 +1,8 @@
 #!/bin/bash
 
 _VERSION="1.0.0"
+_PACKAGE="check-large-files"
+_DETAILS="Searches for large files based on a configurable number of bytes."
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091

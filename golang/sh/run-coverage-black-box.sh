@@ -2,7 +2,7 @@
 
 _VERSION="1.0.0"
 _PACKAGE="run-coverage-black-box"
-_DETAILS="This script runs black-box tests on Go packages and calculates code coverage."
+_DETAILS="Runs black-box tests on Go packages and calculates code coverage. By default, it checks whether the test directory structure matches the source structure and verifies if the current test coverage meets or exceeds the specified minimum."
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091
