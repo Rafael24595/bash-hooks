@@ -1,7 +1,9 @@
 #!/bin/bash
 
-_VERSION="0.7.0-SNAPSHOT"
+_VERSION="0.7.1-SNAPSHOT"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
+
+_CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # -------------#
 # DECLARATIONS #
@@ -420,7 +422,7 @@ update_installer() {
 
     echo -e "${GREEN}Installer updated successfully.${RESET}\n"
 
-    SCRIPT="install-pre-commit"
+    SCRIPT="${_CURRENT_LOCATION}/install-pre-commit"
 
     touch "$SCRIPT"
 
