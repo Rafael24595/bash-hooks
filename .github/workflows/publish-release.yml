@@ -61,7 +61,7 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-  build-and-release:
+  tag-and-release:
     needs: [validate-version, check-tag]
     runs-on: ubuntu-latest
 
@@ -71,7 +71,7 @@ jobs:
 
       - name: Push Git Tag
         run: |
-           VERSION=${{ steps.get_version.outputs.version }}
+           VERSION=${{ needs.validate-version.outputs.version }}
            git config user.name "github-actions"
            git config user.email "github-actions@github.com"
            git tag $VERSION
@@ -82,7 +82,7 @@ jobs:
 
       - name: Create GitHub Release
         run: |
-          VERSION=${{ steps.get_version.outputs.version }}
+          VERSION=${{ needs.validate-version.outputs.version }}
           gh release create "$VERSION" \
             --title "Release $VERSION" \
             --notes "Automated release of $VERSION"
