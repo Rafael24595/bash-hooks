@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.7.1-SNAPSHOT"
+_VERSION="0.8.0-SNAPSHOT"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,6 +23,9 @@ DEFAULT_OUTPUT_FILE=".git/hooks/${DEFAULT_HOOK_MODE}"
 REMOTE_LOCATION=".remote-scripts"
 
 IS_TEST=false
+
+BLOCK_PACKAGES="#!/bin/sh"
+IS_BLOCK=false
 
 WORKSPACE="."
 
@@ -80,6 +83,7 @@ print_help() {
     echo -e "     --workspace=path         $YELLOW Defines the workspace where the script will be placed. $RESET"
     echo -e "     --input=path             $YELLOW Defines the directory and name where the input file is located. $RESET"
     echo -e "     --output=path            $YELLOW Defines directory and name where the script will be placed. $RESET"
+    echo -e "     --block=b                $YELLOW Generates the script as a single file without imports. $RESET"
     echo -e "     --mode=type              $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
     echo -e "     --pull=target/file:tag   $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
     echo ""
@@ -129,6 +133,9 @@ for ARG in "$@"; do
     --output=*)
       OUTPUT_FILE="${ARG#*=}"
       ;;
+    --block | -b)
+      IS_BLOCK=true
+      ;;
     --pull=*)
       EXECUTE_PULL=true
       SOURCE_PULL_PACKAGE="${ARG#--pull=}"
@@ -163,6 +170,14 @@ chmod +x "$OUTPUT_FILE"
 # FUNCTIONS #
 # --------- #
 
+format_package_name() {
+    local PACKAGE="$1"
+    local FUNCTION="${PACKAGE##*/}"
+    FUNCTION="package_${FUNCTION%.*}"
+    FUNCTION="${FUNCTION//-/_}"
+    echo "$FUNCTION"
+}
+
 log_script_execution() {
     local SCRIPT=$1
     local EXPECT=$2
@@ -172,6 +187,10 @@ log_script_execution() {
 
     local LOG_DIRECTION="ne"
     local LOG_RETURN=1
+
+    if $IS_BLOCK == true; then
+        SCRIPT=$(format_package_name "$SCRIPT")
+    fi
 
     if [[ "$EXPECT" == "true" ]]; then
         LOG_DIRECTION="eq"
@@ -196,10 +215,32 @@ log_script_execution() {
     } >> "$OUTPUT_FILE"
 }
 
+package_to_block() {
+    local PACKAGE=$1
+    local FILE_CONTENT=$2
+    local IS_MAIN=$3
+    
+    FILE_CONTENT=${FILE_CONTENT//"#!/bin/bash"$'\n\n'/""}
+    FILE_CONTENT=$(echo "$FILE_CONTENT" | sed 's/^source /### source /')
+
+    if $IS_MAIN == true; then
+        local FUNCTION=$(format_package_name "$PACKAGE")
+
+        INDENTED_CONTENT=$(echo "$FILE_CONTENT" | sed 's/^/    /')
+
+        BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n\n'"### ### ### Function Package: $PACKAGE ### ### ###"$'\n'
+        BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n'"$FUNCTION() {"$'\n'"$INDENTED_CONTENT"$'\n'"}"
+    else
+        BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n\n'"### ### ### Source Package: $PACKAGE ### ### ###"$'\n'
+        BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n'"$FILE_CONTENT"
+    fi
+}
+
 fetch_write_remote_file() {
     local PROJECT=$1
     local FILE_URL=$2
     local NAME=$3
+    local IS_MAIN=$4
 
     echo "$FILE_URL"
 
@@ -218,15 +259,19 @@ fetch_write_remote_file() {
     load_remote_sources "$NAME" "$PROJECT" "$TAG" "${CONTENT}"
     CONTENT="${LAST_CONTENT}"
 
-    SCRIPT="${WORKSPACE}/${REMOTE_LOCATION}/${NAME}"
+    if $IS_BLOCK == true; then
+        package_to_block "$NAME" "$CONTENT" "$IS_MAIN"
+    else
+        SCRIPT="${WORKSPACE}/${REMOTE_LOCATION}/${NAME}"
 
-    mkdir -p "$(dirname "$SCRIPT")"
-    touch "$SCRIPT"
+        mkdir -p "$(dirname "$SCRIPT")"
+        touch "$SCRIPT"
 
-    clean_output "$SCRIPT"
+        clean_output "$SCRIPT"
 
-    echo "$CONTENT" >> "${SCRIPT}"
-    chmod +x "$SCRIPT"
+        echo "$CONTENT" >> "${SCRIPT}"
+        chmod +x "$SCRIPT"
+    fi
 }
 
 load_remote_sources() {
@@ -302,7 +347,7 @@ load_remote_scripts() {
             exit_error "Currently, only GitHub repositories are supported."
         fi
 
-        fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME"
+        fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME" true
         
         log_script_execution "${REMOTE_LOCATION}/${NAME}" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS"
 
@@ -337,6 +382,48 @@ load_sources() {
     echo ""
 }
 
+local_package_to_block() {
+    local PACKAGE=$1
+    local IS_MAIN=$2
+    
+    local LOCATION="${WORKSPACE}/${PACKAGE}"
+
+    file_must_exists "$LOCATION"
+
+    local FILE_CONTENT=$(<$LOCATION)
+
+    local_sources_to_block "$PACKAGE" "$FILE_CONTENT"
+
+    package_to_block "$PACKAGE" "$FILE_CONTENT" "$IS_MAIN"
+}
+
+local_sources_to_block() {
+    local NAME=$1
+    local SCRIPT=$2
+    
+    local SOURCES=$(grep -oP '^\s*source\s+\K([^\s#]+)' <<< "$SCRIPT")
+    if [[ -z "$SOURCES" ]]; then
+        return
+    fi
+
+    echo -e "\nReading resources from ${BOLD}${NAME}${RESET}..."
+
+    for SOURCE in $SOURCES; do
+        local LOCAL_SOURCE="$SOURCE"
+        local FIX_SOURCE="${LOCAL_SOURCE#./}"
+
+        if [[ ! -v DOWNLOADED_SOURCES["$FIX_SOURCE"] ]]; then
+            echo -e "Source found: ${FIX_SOURCE}"
+
+            local_package_to_block "$FIX_SOURCE"
+
+            DOWNLOADED_SOURCES["$FIX_SOURCE"]=1
+        else
+            echo -e "Source found: ${FIX_SOURCE} [${GREEN}cached${RESET}]"
+        fi
+    done
+}
+
 load_local_scripts() {
     echo -e "${YELLOW}\nLoading local scipts...${RESET}"
 
@@ -357,7 +444,11 @@ load_local_scripts() {
 
         echo -e "\nReading ${BOLD}'${SCRIPT}' script${RESET}..."
 
-        LOCATION="${WORKSPACE}/${SCRIPT}"
+        if $IS_BLOCK == true; then
+            local_package_to_block "$SCRIPT" true
+        fi
+
+        local LOCATION="${WORKSPACE}/${SCRIPT}"
 
         file_must_exists "$LOCATION"
 
@@ -373,7 +464,6 @@ load_local_scripts() {
         fi
         LIST_LOCAL+="${GREEN}$SCRIPT_ID${RESET}"
     done
-
 }
 
 file_must_exists() {
@@ -525,6 +615,21 @@ echo -e "\nprintf \"\${BOLD}\\\\nLocal scripts: \\\\n\${RESET}\"" >> "$OUTPUT_FI
 load_local_scripts
 
 block_separator
+
+
+# --------------------- #
+# BUILD SCRIPT AS BLOCK #
+# --------------------- #
+
+if $IS_BLOCK == true; then
+    OUTPUT_CONTENT=$(<$OUTPUT_FILE)
+    OUTPUT_CONTENT=${OUTPUT_CONTENT//"#!/bin/sh"/$'\n'"### ### ### Source script ### ### ###"}
+    BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n'"$OUTPUT_CONTENT"
+
+    clean_output "$OUTPUT_FILE"
+
+    echo "$BLOCK_PACKAGES" >> "$OUTPUT_FILE"
+fi
 
 
 # ---------------- #
