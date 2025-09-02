@@ -79,6 +79,15 @@ By default, the script will be mounted in the same workspace where the installer
     $ ./install-pre-commit --output=.test.sh
     ````
 
+- **Block**: Generates the script as a single file without imports.
+
+    ````bash
+    $ ./install-pre-commit -b
+    ````
+    ````bash
+    $ ./install-pre-commit --block
+    ````
+
 - **Mode**: Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push.
 
     ````bash
