@@ -150,6 +150,11 @@ By default, the script will clean the resources directory of the workspace where
 >           - _Script command. Example: **build**, **dev**, **test**..._
 >       - **Dependencies**: 
 >           - **_node_** - Tested with Node.js v18+, but should work with all versions (https://nodejs.org/en)
+>    - **run-eslint.sh**: Executes ESLint analysis tool to analyze code consistency and identify errors.
+>       - **Dependencies**: 
+>           - **_node_** - Tested with Node.js v18+, but should work with all versions (https://nodejs.org/en)
+>           - **_eslint_** - _9.34.0_ (https://www.npmjs.com/package/eslint)
+>           - **_eslint-formatter-unix_** - _8.40.0_ (https://www.npmjs.com/package/eslint-formatter-unix)
 
 **Elixir/Mix:**
 >    - **check-mix-context.sh**: Executes functions to validate whether the current project is a valid Mix project.

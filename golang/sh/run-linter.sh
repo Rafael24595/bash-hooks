@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.0"
+_VERSION="1.1.1"
 _PACKAGE="run-linter"
 _DETAILS="Runs golangci-lint to find errors in staged Go files."
 
@@ -46,7 +46,7 @@ OUTPUT=$(golangci-lint run --color always ./...)
 LINT_FILES=$(grep -o 'src[^ ]*\.go' <<< "$OUTPUT")
 # Check if no files contains errors
 if [ -z "$LINT_FILES" ]; then
-    echo -e "${GREEN}\nNo files contains errors. Ready to commit.${RESET}\n"
+    echo -e "${GREEN}\nNo files contain errors. Ready to commit.${RESET}\n"
     exit 0
 fi
 
@@ -71,7 +71,7 @@ done <<< "$STAGED_FILES"
 
 # Check the boolean variable after the loop
 if [ "$HAS_ERRORS" = true ]; then
-    echo -e "${RED}\nError: At least one staged file contains errors, fix it before commit.${RESET}"
+    echo -e "${RED}\nError: At least one staged file contains errors. Please fix them before committing.${RESET}"
     exit 1
 fi
 
