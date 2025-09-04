@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.8.1"
+_VERSION="0.8.2"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -188,7 +188,7 @@ log_script_execution() {
     local LOG_DIRECTION="ne"
     local LOG_RETURN=1
 
-    if $IS_BLOCK == true; then
+    if [[ "$IS_BLOCK" == true ]]; then
         SCRIPT=$(format_package_name "$SCRIPT")
     fi
 
@@ -202,12 +202,26 @@ log_script_execution() {
 
     local LOG_FLAGS=""
     for flag in $FLAGS; do
-        LOG_FLAGS+=" --$flag"
+        if [[ -n "$LOG_FLAGS" ]]; then
+            LOG_FLAGS+=" "
+        fi
+        LOG_FLAGS+="--$flag"
     done
+
+    ARGS="${ARGS#"${ARGS%%[![:space:]]*}"}"
+    ARGS="${ARGS%"${ARGS##*[![:space:]]}"}"
+
+    if [[ -n "$ARGS" ]]; then
+        ARGS=" $ARGS"
+    fi
+
+    if [[ -n "$LOG_FLAGS" ]]; then
+        LOG_FLAGS=" $LOG_FLAGS"
+    fi
 
     {
         echo -e "\nprintf \"\${BOLD}\\\\nExecuting '${SCRIPT}' script...\${RESET}\\\\n\"" 
-        echo "$SCRIPT $ARGS $LOG_FLAGS"
+        echo "$SCRIPT$ARGS$LOG_FLAGS"
         echo "if [ \$? -${LOG_DIRECTION} 0 ]; then"
         echo "    exit ${LOG_RETURN}"
         echo 'fi'
@@ -221,11 +235,14 @@ package_to_block() {
     local IS_MAIN=$3
     
     FILE_CONTENT=${FILE_CONTENT//"#!/bin/bash"$'\n\n'/""}
+    # shellcheck disable=SC2001
     FILE_CONTENT=$(echo "$FILE_CONTENT" | sed 's/^source /### source /')
 
-    if $IS_MAIN == true; then
-        local FUNCTION=$(format_package_name "$PACKAGE")
+    if [[ "$IS_MAIN" == true ]]; then
+        local FUNCTION
+        FUNCTION=$(format_package_name "$PACKAGE")
 
+        # shellcheck disable=SC2001
         INDENTED_CONTENT=$(echo "$FILE_CONTENT" | sed 's/^/    /')
 
         BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n\n'"### ### ### Function Package: $PACKAGE ### ### ###"$'\n'
@@ -259,7 +276,7 @@ fetch_write_remote_file() {
     load_remote_sources "$NAME" "$PROJECT" "$TAG" "${CONTENT}"
     CONTENT="${LAST_CONTENT}"
 
-    if $IS_BLOCK == true; then
+    if [ $IS_BLOCK == true ]; then
         package_to_block "$NAME" "$CONTENT" "$IS_MAIN"
     else
         SCRIPT="${WORKSPACE}/${REMOTE_LOCATION}/${NAME}"
@@ -390,7 +407,8 @@ local_package_to_block() {
 
     file_must_exists "$LOCATION"
 
-    local FILE_CONTENT=$(<$LOCATION)
+    local FILE_CONTENT
+    FILE_CONTENT=$(<"$LOCATION")
 
     local_sources_to_block "$PACKAGE" "$FILE_CONTENT"
 
@@ -401,7 +419,8 @@ local_sources_to_block() {
     local NAME=$1
     local SCRIPT=$2
     
-    local SOURCES=$(grep -oP '^\s*source\s+\K([^\s#]+)' <<< "$SCRIPT")
+    local SOURCES
+    SOURCES=$(grep -oP '^\s*source\s+\K([^\s#]+)' <<< "$SCRIPT")
     if [[ -z "$SOURCES" ]]; then
         return
     fi
@@ -444,7 +463,7 @@ load_local_scripts() {
 
         echo -e "\nReading ${BOLD}'${SCRIPT}' script${RESET}..."
 
-        if $IS_BLOCK == true; then
+        if [ $IS_BLOCK == true ]; then
             local_package_to_block "$SCRIPT" true
         fi
 
@@ -621,8 +640,8 @@ block_separator
 # BUILD SCRIPT AS BLOCK #
 # --------------------- #
 
-if $IS_BLOCK == true; then
-    OUTPUT_CONTENT=$(<$OUTPUT_FILE)
+if [ $IS_BLOCK == true ]; then
+    OUTPUT_CONTENT=$(<"$OUTPUT_FILE")
     OUTPUT_CONTENT=${OUTPUT_CONTENT//"#!/bin/sh"/$'\n'"### ### ### Source script ### ### ###"}
     BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n'"$OUTPUT_CONTENT"
 
