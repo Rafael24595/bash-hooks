@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.0"
+_VERSION="1.2.0"
 _PACKAGE="run-credo"
 _DETAILS="Run Credo analysis tool."
 
@@ -9,10 +9,14 @@ _DETAILS="Run Credo analysis tool."
 source ./scripts/colors.sh
 
 STRICT=""
+FORCE_ALL=false
 
-for arg in "$@"; do
-    if [ "$arg" == "--strict" ] || [ "$arg" == "-s" ]; then
+for FLAG in "$@"; do
+    if [ "$FLAG" == "--strict" ] || [ "$FLAG" == "--s" ]; then
         STRICT="--strict"
+    fi
+    if [ "$FLAG" == "--force-all" ] || [ "$FLAG" == "--fa" ]; then
+        FORCE_ALL=true
     fi
 done
 
@@ -22,15 +26,20 @@ if [ -z "$STAGED_FILES" ]; then
     exit 0
 fi
 
+CREDO_TARGET=(".")
+if ! $FORCE_ALL ; then
+    readarray -t CREDO_TARGET <<< "$STAGED_FILES"
+fi
+
 echo -e "${BOLD}\nRunning the Credo (Elixir) analysis tool...\n${RESET}"
 
 # Run Credo
 # --strict: Include all issues. Without it, only positive-priority issues (↑ ↗ →) will be reported
-mix credo "$STRICT"
+mix credo "$STRICT" "${CREDO_TARGET[@]}"
 
 # Run Credo
 # --format flycheck: Display the list in a resumed line format
-OUTPUT=$(mix credo "$STRICT" --format flycheck)
+OUTPUT=$(mix credo "$STRICT" --format flycheck "${CREDO_TARGET[@]}")
 if [ -z "$OUTPUT" ]; then
     echo -e "${GREEN}\nNo issues detected. Ready to commit.${RESET}\n"
     exit 0
