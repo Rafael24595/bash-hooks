@@ -10,9 +10,8 @@ source ./scripts/colors.sh
 
 INSTALL=false
 
-# Parse args
-for arg in "$@"; do
-    if [ "$arg" == "--install" ] || [ "$arg" == "--i" ]; then
+for FLAG in "$@"; do
+    if [ "$FLAG" == "--install" ] || [ "$FLAG" == "--i" ]; then
         INSTALL=true
     fi
 done

@@ -21,14 +21,14 @@ if [ "$#" -eq 0 ]; then
     INSTALL=true
 fi
 
-for arg in "$@"; do
-    if [ "$arg" == "--project" ] || [ "$arg" == "--p" ]; then
+for FLAG in "$@"; do
+    if [ "$FLAG" == "--project" ] || [ "$FLAG" == "--p" ]; then
         PROJECT=true
     fi
-    if [ "$arg" == "--staged" ] || [ "$arg" == "--s" ]; then
+    if [ "$FLAG" == "--staged" ] || [ "$FLAG" == "--s" ]; then
         STAGED=true
     fi
-    if [ "$arg" == "--install" ] || [ "$arg" == "--i" ]; then
+    if [ "$FLAG" == "--install" ] || [ "$FLAG" == "--i" ]; then
         INSTALL=true
     fi
 done
