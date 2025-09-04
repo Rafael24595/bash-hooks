@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.0"
+_VERSION="1.1.1"
 _PACKAGE="run-govulncheck"
 _DETAILS="Executes govulncheck to check for vulnerabilities in dependencies."
 
@@ -15,7 +15,7 @@ INSTALL=false
 
 # Parse args
 for arg in "$@"; do
-    if [ "$arg" == "--install" ] || [ "$arg" == "-i" ]; then
+    if [ "$arg" == "--install" ] || [ "$arg" == "--i" ]; then
         INSTALL=true
     fi
 done

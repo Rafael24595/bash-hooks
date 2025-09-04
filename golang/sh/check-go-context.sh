@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.0"
+_VERSION="1.1.1"
 _PACKAGE="check-go-context"
 _DETAILS="Executes functions to validate whether the current project is a valid Go project."
 
@@ -23,13 +23,13 @@ fi
 
 # Parse args
 for arg in "$@"; do
-    if [ "$arg" == "--project" ] || [ "$arg" == "-p" ]; then
+    if [ "$arg" == "--project" ] || [ "$arg" == "--p" ]; then
         PROJECT=true
     fi
-    if [ "$arg" == "--staged" ] || [ "$arg" == "-s" ]; then
+    if [ "$arg" == "--staged" ] || [ "$arg" == "--s" ]; then
         STAGED=true
     fi
-    if [ "$arg" == "--install" ] || [ "$arg" == "-i" ]; then
+    if [ "$arg" == "--install" ] || [ "$arg" == "--i" ]; then
         INSTALL=true
     fi
 done
