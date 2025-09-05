@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.1"
+_VERSION="1.1.2"
 _PACKAGE="run-linter"
 _DETAILS="Runs golangci-lint to find errors in staged Go files."
 
@@ -10,9 +10,8 @@ source ./scripts/colors.sh
 
 INSTALL=false
 
-# Parse args
-for arg in "$@"; do
-    if [ "$arg" == "--install" ] || [ "$arg" == "-i" ]; then
+for FLAG in "$@"; do
+    if [ "$FLAG" == "--install" ] || [ "$FLAG" == "--i" ]; then
         INSTALL=true
     fi
 done

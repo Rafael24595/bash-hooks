@@ -20,8 +20,8 @@ INVALID_EMPTY=false
 PACKAGE_LIST=()
 
 # Parse flags
-for ARG in "$@"; do
-    case "$ARG" in
+for FLAG in "$@"; do
+    case "$FLAG" in
         --verbose | -v)
             VERBOSE=true
             ;;
@@ -32,10 +32,10 @@ for ARG in "$@"; do
             INVALID_EMPTY=true
             ;;
         --package=*)
-            PACKAGE_LIST+=("${ARG#*=}")
+            PACKAGE_LIST+=("${FLAG#*=}")
             ;;
         --p=*)
-            PACKAGE_LIST+=("${ARG#*=}")
+            PACKAGE_LIST+=("${FLAG#*=}")
             ;;
     esac
 done
@@ -63,7 +63,7 @@ process_package() {
     echo -e "${GREEN}Testing '$PACKAGE_TEST' against '$PACKAGE_SOURCE'${RESET}\n"
 
     echo -e "${YELLOW}Global view of coverage:${RESET}"
-    go test -coverpkg=./${PACKAGE_SOURCE#./} -coverprofile=tmp_coverage.out "$TEST_TARGET"
+    go test -coverpkg=./"${PACKAGE_SOURCE#./}" -coverprofile=tmp_coverage.out "$TEST_TARGET"
     EXIT_CODE_GLOBAL=$?
     if $VERBOSE; then
         echo -e "\n${YELLOW}Detailed coverage report:${RESET}"
@@ -75,7 +75,7 @@ process_package() {
     EXIT_CODE_VERBOSE=${EXIT_CODE_VERBOSE:-0}
     if [ "$EXIT_CODE_GLOBAL" -ne 0 ] || [ "$EXIT_CODE_VERBOSE" -ne 0 ]; then
         echo -e "${RED}Something went wrong during testing coverage calculation.${RESET}"
-        exit $EXIT_CODE
+        exit "$EXIT_CODE"
     fi
 
     if [ -f tmp_coverage.out ]; then
@@ -119,7 +119,6 @@ if [ ! -f coverage.out ]; then
         echo -e "${RED}No tests found, coverage file not generated.${RESET}"
         exit 1
     fi
-    exit 1
 fi
 
 COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | tr -d '%')

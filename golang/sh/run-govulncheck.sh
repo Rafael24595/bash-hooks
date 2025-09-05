@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.0"
+_VERSION="1.1.1"
 _PACKAGE="run-govulncheck"
 _DETAILS="Executes govulncheck to check for vulnerabilities in dependencies."
 
@@ -13,9 +13,8 @@ source ./golang/sh/utils-golang.sh
 
 INSTALL=false
 
-# Parse args
-for arg in "$@"; do
-    if [ "$arg" == "--install" ] || [ "$arg" == "-i" ]; then
+for FLAG in "$@"; do
+    if [ "$FLAG" == "--install" ] || [ "$FLAG" == "--i" ]; then
         INSTALL=true
     fi
 done

@@ -120,13 +120,13 @@ By default, the script will clean the resources directory of the workspace where
 >    - **check-go-context.sh**: Executes functions to validate whether the current project is a valid Go project.
 >       - **Flags**: 
 >           - **If none are selected, all checks will be executed**
->           - **--project** | **-p**: Verifies if this is a Go project
->           - **--staged** | **-s**: Checks for staged Go files
->           - **--install** | **-i**: Verifies if Go is installed
+>           - **--project** | **--p**: Verifies if this is a Go project
+>           - **--staged** | **--s**: Checks for staged Go files
+>           - **--install** | **--i**: Verifies if Go is installed
 >    - **run-formatter.sh**: Format all Go files.
 >    - **run-linter.sh**: Runs **_golangci-lint_**  to find errors in staged Go files.
 >       - **Flags**: 
->           - **--install**: Installs the latest version of golangci-lint if it is not already 
+>           - **--install** | **--i**: Installs the latest version of golangci-lint if it is not already 
 >       - **Dependencies**: 
 >           - **_golangci-lint_** -  _1.62.0_ (https://github.com/golangci/golangci-lint)
 >    - **run-tests.sh**: Runs all Go tests.
@@ -151,6 +151,8 @@ By default, the script will clean the resources directory of the workspace where
 >       - **Dependencies**: 
 >           - **_node_** - Tested with Node.js v18+, but should work with all versions (https://nodejs.org/en)
 >    - **run-eslint.sh**: Executes ESLint analysis tool to analyze code consistency and identify errors.
+>       - **Flags**: 
+>           - **--force-all** | **--fa**: Runs ESLint for all configured project files. If not specified only staged files will be analyzed
 >       - **Dependencies**: 
 >           - **_node_** - Tested with Node.js v18+, but should work with all versions (https://nodejs.org/en)
 >           - **_eslint_** - _9.34.0_ (https://www.npmjs.com/package/eslint)
@@ -160,15 +162,16 @@ By default, the script will clean the resources directory of the workspace where
 >    - **check-mix-context.sh**: Executes functions to validate whether the current project is a valid Mix project.
 >       - **Flags**: 
 >           - **If none are selected, all checks will be executed**
->           - **--project** | **-p**: Verifies if this is a Mix project
->           - **--staged** | **-s**: Checks for staged Elixir files (`*.ex` / `*.exs`)
->           - **--install** | **-i**: Verifies if Elixir and Mix are installed
+>           - **--project** | **--p**: Verifies if this is a Mix project
+>           - **--staged** | **--s**: Checks for staged Elixir files (`*.ex` / `*.exs`)
+>           - **--install** | **--i**: Verifies if Elixir and Mix are installed
 >    - **run-mix-tests.sh**: Executes all Mix tests.
 >       - **Dependencies**: 
 >           - **_Mix_** - _^1.12.0_ (https://hexdocs.pm/mix/Mix.Tasks.Test.html)
 >    - **run-credo.sh**: Executes Credo analysis tool to analyze code consistency and identify errors.
 >       - **Flags**: 
->           - **--static** | **-s**: Includes all issues. Without it, only positive-priority issues (↑ ↗ →) will be reported
+>           - **--static** | **--s**: Includes all issues. Without it, only positive-priority issues (↑ ↗ →) will be reported
+>           - **--force-all** | **--fa**: Runs Credo for all project files. If not specified only staged files will be analyzed
 >       - **Dependencies**: 
 >           - **_Credo_** - _v1.7.12_ (https://hexdocs.pm/credo/overview.html)
 

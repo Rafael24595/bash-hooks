@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 _PACKAGE="check-mix-context"
 _DETAILS="Executes functions to validate whether the current project is a valid Mix (Elixir) project."
 
@@ -21,14 +21,14 @@ if [ "$#" -eq 0 ]; then
     INSTALL=true
 fi
 
-for arg in "$@"; do
-    if [ "$arg" == "--project" ] || [ "$arg" == "-p" ]; then
+for FLAG in "$@"; do
+    if [ "$FLAG" == "--project" ] || [ "$FLAG" == "--p" ]; then
         PROJECT=true
     fi
-    if [ "$arg" == "--staged" ] || [ "$arg" == "-s" ]; then
+    if [ "$FLAG" == "--staged" ] || [ "$FLAG" == "--s" ]; then
         STAGED=true
     fi
-    if [ "$arg" == "--install" ] || [ "$arg" == "-i" ]; then
+    if [ "$FLAG" == "--install" ] || [ "$FLAG" == "--i" ]; then
         INSTALL=true
     fi
 done
