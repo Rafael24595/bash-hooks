@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.0"
+_VERSION="1.2.0"
 _PACKAGE="run-eslint"
 _DETAILS="Run ESLint analysis tool."
 
@@ -28,6 +28,11 @@ fi
 ESLINT_TARGET=(".")
 if ! $FORCE_ALL ; then
     readarray -t ESLINT_TARGET <<< "$STAGED_FILES"
+fi
+
+if ! command -v npx eslint -v &> /dev/null; then
+    echo -e "${RED}\nESLint could not be found. Please install it to proceed.${RESET}"
+    exit 1
 fi
 
 echo -e "${BOLD}\nRunning the ESLint (JavaScript) analysis tool...\n${RESET}"

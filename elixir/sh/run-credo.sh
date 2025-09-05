@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.2.0"
+_VERSION="1.3.0"
 _PACKAGE="run-credo"
 _DETAILS="Run Credo analysis tool."
 
@@ -29,6 +29,11 @@ fi
 CREDO_TARGET=(".")
 if ! $FORCE_ALL ; then
     readarray -t CREDO_TARGET <<< "$STAGED_FILES"
+fi
+
+if ! command -v mix credo -v &> /dev/null; then
+    echo -e "${RED}\nCredo could not be found. Please install it to proceed.${RESET}"
+    exit 1
 fi
 
 echo -e "${BOLD}\nRunning the Credo (Elixir) analysis tool...\n${RESET}"
