@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.8.2"
+_VERSION="0.8.3"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -455,8 +455,8 @@ load_local_scripts() {
     for SCRIPT_ID in $SCRIPT_IDS; do
         SCRIPT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .path" "${INPUT_FILE}")
 
-        EXPECT=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .expect" "${INPUT_FILE}")
-        RETURN=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .return" "${INPUT_FILE}")
+        EXPECT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .expect" "${INPUT_FILE}")
+        RETURN=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .return" "${INPUT_FILE}")
 
         ARGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
         FLAGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .flags[]" "${INPUT_FILE}" | tr '\n' ' ')
@@ -471,7 +471,7 @@ load_local_scripts() {
 
         file_must_exists "$LOCATION"
 
-        log_script_execution "$SCRIPT" "$EXPECT" "$EXIT" "$ARGS" "$FLAGS"
+        log_script_execution "$SCRIPT" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS"
 
         chmod +x "$LOCATION"
 
