@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.8.3"
+_VERSION="0.8.4"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -258,8 +258,6 @@ fetch_write_remote_file() {
     local FILE_URL=$2
     local NAME=$3
     local IS_MAIN=$4
-
-    echo "$FILE_URL"
 
     echo -e "\nFetching ${NAME} from ${BOLD}'${FILE_URL}'${RESET}..."
 
