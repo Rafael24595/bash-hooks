@@ -175,6 +175,19 @@ By default, the script will clean the resources directory of the workspace where
 >       - **Dependencies**: 
 >           - **_Credo_** - _v1.7.12_ (https://hexdocs.pm/credo/overview.html)
 
+**Zig:**
+>    - **check-zig-context.sh**: Executes functions to validate whether the current project is a valid Zig project.
+>       - **Flags**: 
+>           - **If none are selected, all checks will be executed**
+>           - **--project** | **--p**: Verifies if this is a Zig project
+>           - **--staged** | **--s**: Checks for staged Elixir files (`*.zig` / `*.zon`)
+>           - **--install** | **--i**: Verifies if Zig is installed
+>    - **run-check.sh**: Run Zig's ast-check on staged Zig files to detect errors.
+>    - **run-fmt.sh**: Run Zig's fmt to check staged files for formatting issues and optionally fix them.
+>       - **Flags**: 
+>           - **--apply** | **--a**: Fix the issues and add the corrected files back to the Git staging area.
+>    - **run-tests.sh**: Run all Zig tests.
+
 **Shell:**
 >    - **run-linter.sh**: Runs **_shellcheck_**  to find errors in staged Shell files.
 >       - **Dependencies**: 
