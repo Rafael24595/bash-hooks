@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.8.4"
+_VERSION="0.8.5"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -172,10 +172,15 @@ chmod +x "$OUTPUT_FILE"
 
 format_package_name() {
     local PACKAGE="$1"
-    local FUNCTION="${PACKAGE##*/}"
-    FUNCTION="package_${FUNCTION%.*}"
-    FUNCTION="${FUNCTION//-/_}"
-    echo "$FUNCTION"
+    
+    PACKAGE="${PACKAGE%.*}"
+
+    PACKAGE="${PACKAGE#./}"
+    PACKAGE="${PACKAGE#../}"
+
+    PACKAGE="${PACKAGE//[-\/\\]/_}"
+
+    echo "package_$PACKAGE"
 }
 
 log_script_execution() {
