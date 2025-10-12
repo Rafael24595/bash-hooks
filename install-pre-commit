@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.8.5"
+_VERSION="0.9.0"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -39,10 +39,12 @@ declare -A DOWNLOADED_SOURCES
 COUNT_SOURCES=0
 COUNT_LOCAL=0
 COUNT_REMOTE=0
+COUNT_IGNORED=0
 
 LIST_SOURCES=""
 LIST_LOCAL=""
 LIST_REMOTE=""
+LIST_IGNORED=""
 
 START_TIME=$(date +%s%3N)
 
@@ -55,6 +57,9 @@ SOURCE_UPDATE_VERSION=""
 
 EXECUTE_PULL=false
 SOURCE_PULL_PACKAGE=""
+
+DISABLE_HOOK_STATUS=-1
+DISABLE_HOOK=false
 
 # -------------- #
 # MISC FUNCTIONS #
@@ -80,6 +85,8 @@ print_help() {
     echo -e "  -v --version                $YELLOW Shows actual installer version. $RESET"
     echo -e "  -u --update=tag             $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
     echo -e "  -t                          $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
+    echo -e "  -d                          $YELLOW Disables the hook if exists otherwise creates it disabled. $RESET"
+    echo -e "  -e                          $YELLOW Enables the hook if exists otherwise creates it enabled. $RESET"
     echo -e "     --workspace=path         $YELLOW Defines the workspace where the script will be placed. $RESET"
     echo -e "     --input=path             $YELLOW Defines the directory and name where the input file is located. $RESET"
     echo -e "     --output=path            $YELLOW Defines directory and name where the script will be placed. $RESET"
@@ -96,6 +103,7 @@ execution_resume() {
     echo -e "[${BOLD}$COUNT_REMOTE${RESET}] Remote scripts: $LIST_REMOTE"
     echo -e "[${BOLD}$COUNT_SOURCES${RESET}] Sources: $LIST_SOURCES"
     echo -e "[${BOLD}$COUNT_LOCAL${RESET}] Local scripts: $LIST_LOCAL"
+    echo -e "[${BOLD}$COUNT_IGNORED${RESET}] Ignored scripts: $LIST_IGNORED"
 
     echo -e "\n${YELLOW}Execution time: ${TIME} ms${RESET}"
 
@@ -152,6 +160,12 @@ for ARG in "$@"; do
     --update* | -u)
       EXECUTE_UPDATE=true
       ;;
+    --enable* | -e)
+      DISABLE_HOOK_STATUS=0
+      ;;
+    --disable* | -d)
+      DISABLE_HOOK_STATUS=1
+      ;;
     --help* | -h)
       print_help
       exit 0
@@ -161,6 +175,16 @@ done
 
 INPUT_FILE="${WORKSPACE}/${INPUT_FILE}"
 OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
+
+if [[ "$DISABLE_HOOK_STATUS" != -1 ]]; then
+    DISABLE_HOOK=$([[ "$DISABLE_HOOK_STATUS" -eq 1 ]] && echo true || echo false)
+    if [[ -f "$OUTPUT_FILE" ]]; then
+        echo -e "Update hook '$OUTPUT_FILE' status to $DISABLE_HOOK"
+        sed -i "s/DISABLED_HOOK=.*/DISABLED_HOOK=$DISABLE_HOOK/g" "$OUTPUT_FILE"
+        sed -i "s/^DISABLED_HOOK=.*/DISABLED_HOOK=$DISABLE_HOOK/" "$OUTPUT_FILE"
+        exit 0
+    fi
+fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 touch "$OUTPUT_FILE"
@@ -367,6 +391,20 @@ load_remote_scripts() {
             exit_error "Currently, only GitHub repositories are supported."
         fi
 
+        echo -e "\nReading ${BOLD}'${NAME}' script configuration${RESET}..."
+
+        DISABLED=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .disabled" "${INPUT_FILE}")
+        if [[ "$DISABLED" == "true" ]]; then
+            echo -e "${YELLOW}The script is flagged as disabled; skipping....${RESET}"
+            COUNT_IGNORED=$((COUNT_IGNORED + 1))
+            if [ -n "$LIST_IGNORED" ]; then
+                LIST_IGNORED+=", "
+            fi
+            LIST_IGNORED+="${GREEN}$NAME${RESET}"
+
+            continue
+        fi
+
         fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME" true
         
         log_script_execution "${REMOTE_LOCATION}/${NAME}" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS"
@@ -465,6 +503,18 @@ load_local_scripts() {
         FLAGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .flags[]" "${INPUT_FILE}" | tr '\n' ' ')
 
         echo -e "\nReading ${BOLD}'${SCRIPT}' script${RESET}..."
+
+        DISABLED=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .disabled" "${INPUT_FILE}")
+        if [[ "$DISABLED" == "true" ]]; then
+            echo -e "${YELLOW}The script is flagged as disabled; skipping...${RESET}"
+            COUNT_IGNORED=$((COUNT_IGNORED + 1))
+            if [ -n "$LIST_IGNORED" ]; then
+                LIST_IGNORED+=", "
+            fi
+            LIST_IGNORED+="${GREEN}$SCRIPT_ID${RESET}"
+
+            continue
+        fi
 
         if [ $IS_BLOCK == true ]; then
             local_package_to_block "$SCRIPT" true
@@ -596,7 +646,13 @@ fi
     echo "#!/bin/sh"
     echo -e "\n# Color codes"
     echo -e "BOLD=\"\\\033[1m\""
+    echo -e "YELLOW=\"\\\033[0;33m\""
     echo -e "RESET=\"\\\033[0m\""
+    echo -e "\nDISABLED_HOOK=$DISABLE_HOOK"
+    echo -e "if [ \$DISABLED_HOOK == true ]; then"
+    echo -e "   echo -e \"\${YELLOW}\${BOLD}Warning, the hook disabled.\"\${RESET}"
+    echo -e "   exit 0"
+    echo -e "fi"
 } >> "$OUTPUT_FILE"
 
 echo -e "\n${BOLD}Building pre-commit hook...${RESET}"

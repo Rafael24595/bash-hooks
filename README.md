@@ -9,6 +9,7 @@ The configuration file must be named [**_pre-commit-build.yaml_**](https://githu
         - **tag**: The tag of the repository.
         - **target**: The path that contains the script.
         - **name**: The name of the script.
+        - **disabled**: The status of the script.
         - **expect**: The expected result of the script — `true` for exit code `0`, `false` for exit code `< 1`.
         - **return**: The actual return value of the script. `true` for `1`, `false` for `0`.
         - **flags**: The flags passed to the script, defined without the `--` prefix.
@@ -16,6 +17,7 @@ The configuration file must be named [**_pre-commit-build.yaml_**](https://githu
     - For local scripts, use a "**_local_**" tag that contains a list of "**_scripts_**" with the following structure:
         - **id**: The ID of the script.
         - **path**: The path that contains the script.
+        - **disabled**: The status of the script.
         - **expect**: The expected result of the script — `true` for exit code `0`, `false` for exit code `< 1`.
         - **return**: The actual return value of the script. `true` for `1`, `false` for `0`.
         - **flags**: The flags passed to the script, defined without the `--` prefix.
@@ -61,6 +63,16 @@ By default, the script will be mounted in the same workspace where the installer
 
     ````bash
     $ ./install-pre-commit -t
+    ````
+- **Enable**: Disables the hook if exists otherwise creates it disabled.
+
+    ````bash
+    $ ./install-pre-commit -d
+    ````
+- **disable**: Enables the hook if exists otherwise creates it enabled.
+
+    ````bash
+    $ ./install-pre-commit -e
     ````
 - **Workspace**: Defines the workspace where the script will be placed.
 
