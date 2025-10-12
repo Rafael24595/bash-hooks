@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.9.0"
+_VERSION="0.9.1"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -213,12 +213,15 @@ log_script_execution() {
     local RETURN=$3
     local ARGS=$4
     local FLAGS=$5
+    local IS_REMOTE=$6
 
     local LOG_DIRECTION="ne"
     local LOG_RETURN=1
 
     if [[ "$IS_BLOCK" == true ]]; then
         SCRIPT=$(format_package_name "$SCRIPT")
+    elif [[ "$IS_REMOTE" == true ]]; then
+        SCRIPT="$REMOTE_LOCATION/$SCRIPT"
     fi
 
     if [[ "$EXPECT" == "true" ]]; then
@@ -288,17 +291,13 @@ fetch_write_remote_file() {
     local NAME=$3
     local IS_MAIN=$4
 
-    echo -e "\nFetching ${NAME} from ${BOLD}'${FILE_URL}'${RESET}..."
+    local FILE="${NAME##*/}"
+
+    echo -e "\nFetching ${FILE} from ${BOLD}'${FILE_URL}'${RESET}..."
 
     if ! CONTENT=$(curl -sf "$FILE_URL") ; then
         exit_error "Failed to retrieve script from GitHub."
     fi
-
-    COUNT_REMOTE=$((COUNT_REMOTE + 1))
-    if [ -n "$LIST_REMOTE" ]; then
-        LIST_REMOTE+=", "
-    fi
-    LIST_REMOTE+="${GREEN}$NAME${RESET}"
 
     load_remote_sources "$NAME" "$PROJECT" "$TAG" "${CONTENT}"
     CONTENT="${LAST_CONTENT}"
@@ -323,6 +322,8 @@ load_remote_sources() {
     local PROJECT=$2
     local TAG=$3
     local SCRIPT=$4
+
+    local FILE="${NAME##*/}"
     
     local SOURCES
     SOURCES=$(grep -oP '^\s*source\s+\K([^\s#]+)' <<< "$SCRIPT")
@@ -331,7 +332,7 @@ load_remote_sources() {
         return
     fi
 
-    echo -e "\nLoading resources from ${BOLD}${NAME}${RESET}..."
+    echo -e "\nLoading resources from ${BOLD}${FILE}${RESET}..."
 
     local UPDATED_SCRIPT="${SCRIPT}"
 
@@ -341,10 +342,18 @@ load_remote_sources() {
 
         local FILE_URL="https://raw.githubusercontent.com/${PROJECT}/refs/tags/${TAG}/${LOCAL_SOURCE}"
 
+        local FILE_SOURCE="${SOURCE##*/}"
+
         if [[ ! -v DOWNLOADED_SOURCES["$FIX_SOURCE"] ]]; then
             echo -e "Source found: ${FIX_SOURCE}"
             fetch_write_remote_file "$PROJECT" "$FILE_URL" "$FIX_SOURCE" 0
             DOWNLOADED_SOURCES["$FIX_SOURCE"]=1
+
+            COUNT_SOURCES=$((COUNT_SOURCES + 1))
+            if [ -n "$LIST_SOURCES" ]; then
+                LIST_SOURCES+=", "
+            fi
+            LIST_SOURCES+="${GREEN}$FILE_SOURCE${RESET}"
         else
             echo -e "Source found: ${FIX_SOURCE} [${GREEN}cached${RESET}]"
         fi
@@ -405,9 +414,17 @@ load_remote_scripts() {
             continue
         fi
 
-        fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME" true
+        local LOCATION="${TARGET}/${NAME}"
+
+        fetch_write_remote_file "$PROJECT" "$FILE_URL" "$LOCATION" true
         
-        log_script_execution "${REMOTE_LOCATION}/${NAME}" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS"
+        log_script_execution "$LOCATION" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" true
+
+        COUNT_REMOTE=$((COUNT_REMOTE + 1))
+        if [ -n "$LIST_REMOTE" ]; then
+            LIST_REMOTE+=", "
+        fi
+        LIST_REMOTE+="${GREEN}$NAME${RESET}"
 
         echo -e "${GREEN}Script loadded successfully.${RESET}"
     done
@@ -524,7 +541,7 @@ load_local_scripts() {
 
         file_must_exists "$LOCATION"
 
-        log_script_execution "$SCRIPT" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS"
+        log_script_execution "$SCRIPT" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" false
 
         chmod +x "$LOCATION"
 
