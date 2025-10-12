@@ -9,6 +9,7 @@ The configuration file must be named [**_pre-commit-build.yaml_**](https://githu
         - **tag**: The tag of the repository.
         - **target**: The path that contains the script.
         - **name**: The name of the script.
+        - **disabled**: The status of the script.
         - **expect**: The expected result of the script — `true` for exit code `0`, `false` for exit code `< 1`.
         - **return**: The actual return value of the script. `true` for `1`, `false` for `0`.
         - **flags**: The flags passed to the script, defined without the `--` prefix.
@@ -16,6 +17,7 @@ The configuration file must be named [**_pre-commit-build.yaml_**](https://githu
     - For local scripts, use a "**_local_**" tag that contains a list of "**_scripts_**" with the following structure:
         - **id**: The ID of the script.
         - **path**: The path that contains the script.
+        - **disabled**: The status of the script.
         - **expect**: The expected result of the script — `true` for exit code `0`, `false` for exit code `< 1`.
         - **return**: The actual return value of the script. `true` for `1`, `false` for `0`.
         - **flags**: The flags passed to the script, defined without the `--` prefix.
@@ -61,6 +63,16 @@ By default, the script will be mounted in the same workspace where the installer
 
     ````bash
     $ ./install-pre-commit -t
+    ````
+- **Enable**: Disables the hook if exists otherwise creates it disabled.
+
+    ````bash
+    $ ./install-pre-commit -d
+    ````
+- **disable**: Enables the hook if exists otherwise creates it enabled.
+
+    ````bash
+    $ ./install-pre-commit -e
     ````
 - **Workspace**: Defines the workspace where the script will be placed.
 
@@ -174,6 +186,19 @@ By default, the script will clean the resources directory of the workspace where
 >           - **--force-all** | **--fa**: Runs Credo for all project files. If not specified only staged files will be analyzed
 >       - **Dependencies**: 
 >           - **_Credo_** - _v1.7.12_ (https://hexdocs.pm/credo/overview.html)
+
+**Zig:**
+>    - **check-zig-context.sh**: Executes functions to validate whether the current project is a valid Zig project.
+>       - **Flags**: 
+>           - **If none are selected, all checks will be executed**
+>           - **--project** | **--p**: Verifies if this is a Zig project
+>           - **--staged** | **--s**: Checks for staged Elixir files (`*.zig` / `*.zon`)
+>           - **--install** | **--i**: Verifies if Zig is installed
+>    - **run-check.sh**: Run Zig's ast-check on staged Zig files to detect errors.
+>    - **run-fmt.sh**: Run Zig's fmt to check staged files for formatting issues and optionally fix them.
+>       - **Flags**: 
+>           - **--apply** | **--a**: Fix the issues and add the corrected files back to the Git staging area.
+>    - **run-tests.sh**: Run all Zig tests.
 
 **Shell:**
 >    - **run-linter.sh**: Runs **_shellcheck_**  to find errors in staged Shell files.
