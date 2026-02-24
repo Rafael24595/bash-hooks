@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.0"
+_VERSION="1.2.0"
 _PACKAGE="run-tests"
 _DETAILS="Run all Go tests."
 
@@ -8,13 +8,29 @@ _DETAILS="Run all Go tests."
 # shellcheck disable=SC1091
 source ./scripts/colors.sh
 
+TAGS=()
+
+for FLAG in "$@"; do
+    case "$FLAG" in
+        --tags=* | --t=*)
+            TAGS+=("${FLAG#*=}")
+            ;;
+    esac
+done
+
 # Run Go tests on all the Go files in the project
 echo -e "${BOLD}\nRunning Go tests...\n${RESET}"
+
+ARGS=(-v -failfast ./...)
+if (( ${#TAGS[@]} > 0 )); then
+    JOINED=$(IFS=,; echo "${TAGS[*]}")
+    ARGS=(-tags="$JOINED" "${ARGS[@]}")
+fi
 
 # Run tests on all Go files in the repository (including any test files)
 # -v for verbose output to see detailed results
 # -failfast to stop at the first test failure
-go test -v -failfast ./...
+go test "${ARGS[@]}"
 
 # Capture the exit code of `go test`
 TEST_EXIT_CODE=$?
