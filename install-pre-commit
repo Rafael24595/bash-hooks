@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.10.0"
+_VERSION="0.11.0"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
