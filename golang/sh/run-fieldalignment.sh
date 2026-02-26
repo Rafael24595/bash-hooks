@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.0"
+_VERSION="1.0.0"
 _PACKAGE="run-fieldalignment"
 _DETAILS="Run fieldalignment analysis tool."
 
