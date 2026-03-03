@@ -135,8 +135,11 @@ By default, the script will clean the resources directory of the workspace where
 >           - **--project** | **--p**: Verifies if this is a Go project
 >           - **--staged** | **--s**: Checks for staged Go files
 >           - **--install** | **--i**: Verifies if Go is installed
+>    - **run-fieldalignment.sh**: Runs the `fieldalignment` tool to analyze Go struct memory layout and detect potential memory savings.  
+>       - **Flags**: 
+>           - **--percent** | **--p**: Defines the minimum percentage of memory savings required to fail the check. **Default:** `25%`
 >    - **run-formatter.sh**: Format all Go files.
->    - **run-linter.sh**: Runs **_golangci-lint_**  to find errors in staged Go files.
+>    - **run-linter.sh**: Runs `golangci-lint`  to find errors in staged Go files.
 >       - **Flags**: 
 >           - **--install** | **--i**: Installs the latest version of golangci-lint if it is not already 
 >       - **Dependencies**: 
@@ -144,7 +147,7 @@ By default, the script will clean the resources directory of the workspace where
 >    - **run-tests.sh**: Runs all Go tests.
 >       - **Flags**: 
 >           - **--tags=`<tag>`** | **--t=`<tag>`**: Defines the test build tags. Can be specified multiple times. Tags are combined as a comma-separated list.
->    - **run-govulncheck.sh**: Executes govulncheck to check for vulnerabilities in dependencies.
+>    - **run-govulncheck.sh**: Executes `govulncheck` to check for vulnerabilities in dependencies.
 >       - **Flags**: 
 >           - **--install**: Installs the latest version of govulncheck if it is not already installed
 >       - **Dependencies**: 
@@ -164,9 +167,9 @@ By default, the script will clean the resources directory of the workspace where
 >           - _Script command. Example: **build**, **dev**, **test**..._
 >       - **Dependencies**: 
 >           - **_node_** - Tested with Node.js v18+, but should work with all versions (https://nodejs.org/en)
->    - **run-eslint.sh**: Executes ESLint analysis tool to analyze code consistency and identify errors.
+>    - **run-eslint.sh**: Executes `ESLint` analysis tool to analyze code consistency and identify errors.
 >       - **Flags**: 
->           - **--force-all** | **--fa**: Runs ESLint for all configured project files. If not specified only staged files will be analyzed
+>           - **--force-all** | **--fa**: Runs `ESLint` for all configured project files. If not specified only staged files will be analyzed
 >       - **Dependencies**: 
 >           - **_node_** - Tested with Node.js v18+, but should work with all versions (https://nodejs.org/en)
 >           - **_eslint_** - _9.34.0_ (https://www.npmjs.com/package/eslint)
