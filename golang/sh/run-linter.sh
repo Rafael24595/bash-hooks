@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.2"
+_VERSION="1.2.0"
 _PACKAGE="run-linter"
 _DETAILS="Runs golangci-lint to find errors in staged Go files."
 
@@ -9,11 +9,17 @@ _DETAILS="Runs golangci-lint to find errors in staged Go files."
 source ./scripts/colors.sh
 
 INSTALL=false
+ENABLE=()
 
 for FLAG in "$@"; do
-    if [ "$FLAG" == "--install" ] || [ "$FLAG" == "--i" ]; then
-        INSTALL=true
-    fi
+    case "$FLAG" in
+        --install | --i)
+            INSTALL=true
+            ;;
+        --enable=* | --e=*)
+            ENABLE+=("${FLAG#*=}")
+            ;;
+    esac
 done
 
 # Ensure that golangci-lint is installed
@@ -40,29 +46,38 @@ fi
 # Run golangci-lint across the entire repository (all Go files)
 echo -e "${BOLD}\nRunning golangci-lint on all Go files in the repository...${RESET}"
 
-OUTPUT=$(golangci-lint run --color always ./...)
+ARGS=(--color always ./...)
+if (( ${#ENABLE[@]} > 0 )); then
+    JOINED=$(IFS=,; echo "${ENABLE[*]}")
+    ARGS=(--enable "$JOINED" "${ARGS[@]}")
+fi
 
-LINT_FILES=$(grep -o 'src[^ ]*\.go' <<< "$OUTPUT")
+OUTPUT=$(golangci-lint run "${ARGS[@]}")
+
+LINT_FILES=$(grep -oE '[^[:space:]]+\.go' <<< "$OUTPUT")
 # Check if no files contains errors
 if [ -z "$LINT_FILES" ]; then
     echo -e "${GREEN}\nNo files contain errors. Ready to commit.${RESET}\n"
     exit 0
 fi
 
-# Convert to Unix format
-LINT_FILES=$(echo "$LINT_FILES" | sed 's/\\/\//g')
-
 echo -e "${YELLOW}\nError report:${RESET}"
 echo "$OUTPUT"
 
 echo -e "${YELLOW}\nChecking staged files:\n${RESET}"
 
+LINT_FILES=$(echo "$LINT_FILES" \
+  | sed 's/\\/\//g' \
+  | tr -d '\r' \
+  | sed -E 's/\x1B\[[0-9;]*[mK]//g')
+
+STAGED_FILES=$(echo "$STAGED_FILES" \
+    | tr -d '\r' \
+    | sort -u)
+
 HAS_ERRORS=false
 while IFS= read -r FILE; do
-    # Convert to Unix format
-    FILE=$(echo "$FILE" | sed 's/\\/\//g')
-    # Check if the file is in the list of staged files
-    if grep -q "^$FILE$" <<< "$LINT_FILES"; then
+    if grep -Fxq "$FILE" <<< "$LINT_FILES"; then
         echo -e "File '${BOLD}$FILE${RESET}' contains errors."
         HAS_ERRORS=true
     fi
