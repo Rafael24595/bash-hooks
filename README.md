@@ -142,11 +142,13 @@ By default, the script will clean the resources directory of the workspace where
 >    - **run-linter.sh**: Runs `golangci-lint`  to find errors in staged Go files.
 >       - **Flags**: 
 >           - **--install** | **--i**: Installs the latest version of golangci-lint if it is not already 
+>           - **--enable=`<lnt>`** | **--e=`<lnt>`**: Enables the specific linter. Can be specified multiple times. Linters are combined as a comma-separated list.
 >       - **Dependencies**: 
 >           - **_golangci-lint_** -  _1.62.0_ (https://github.com/golangci/golangci-lint)
 >    - **run-tests.sh**: Runs all Go tests.
 >       - **Flags**: 
 >           - **--tags=`<tag>`** | **--t=`<tag>`**: Defines the test build tags. Can be specified multiple times. Tags are combined as a comma-separated list.
+>           - **--race** | **--r**: Runs the tests using the race detector.
 >    - **run-govulncheck.sh**: Executes `govulncheck` to check for vulnerabilities in dependencies.
 >       - **Flags**: 
 >           - **--install**: Installs the latest version of govulncheck if it is not already installed
