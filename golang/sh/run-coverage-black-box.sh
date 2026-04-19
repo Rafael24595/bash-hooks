@@ -40,7 +40,6 @@ for FLAG in "$@"; do
     esac
 done
 
-
 if [ -f coverage.out ]; then
     rm -f coverage.out
 fi
