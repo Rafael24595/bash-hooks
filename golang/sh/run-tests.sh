@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.2.0"
+_VERSION="1.3.0"
 _PACKAGE="run-tests"
 _DETAILS="Run all Go tests."
 
@@ -8,12 +8,16 @@ _DETAILS="Run all Go tests."
 # shellcheck disable=SC1091
 source ./scripts/colors.sh
 
+RACE=false
 TAGS=()
 
 for FLAG in "$@"; do
     case "$FLAG" in
         --tags=* | --t=*)
             TAGS+=("${FLAG#*=}")
+            ;;
+        --race | --r)
+            RACE=true
             ;;
     esac
 done
@@ -22,6 +26,10 @@ done
 echo -e "${BOLD}\nRunning Go tests...\n${RESET}"
 
 ARGS=(-v -failfast ./...)
+if [ "$RACE" = true ]; then
+    ARGS=(-race "${ARGS[@]}")
+fi
+
 if (( ${#TAGS[@]} > 0 )); then
     JOINED=$(IFS=,; echo "${TAGS[*]}")
     ARGS=(-tags="$JOINED" "${ARGS[@]}")
