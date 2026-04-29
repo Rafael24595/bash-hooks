@@ -89,4 +89,4 @@ if [ "$HAS_ERRORS" = true ]; then
     exit 1
 fi
 
-echo -e "${GREEN}\nAll Go files passed the linter. Ready to commit.${RESET}"
+echo -e "${GREEN}\nAll Go staged files passed the linter. Ready to commit.${RESET}"

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.3.0"
+_VERSION="1.4.0"
 _PACKAGE="run-tests"
 _DETAILS="Run all Go tests."
 
@@ -38,14 +38,31 @@ fi
 # Run tests on all Go files in the repository (including any test files)
 # -v for verbose output to see detailed results
 # -failfast to stop at the first test failure
-go test "${ARGS[@]}"
+OUTPUT=$(go test "${ARGS[@]}")
 
 # Capture the exit code of `go test`
 TEST_EXIT_CODE=$?
 
-if [ $TEST_EXIT_CODE -ne 0 ]; then
-    echo -e "${RED}\nError: Some tests failed. Please fix them before committing.${RESET}"
-    exit $TEST_EXIT_CODE
+printf "%b\n" "$OUTPUT"
+
+if [ $TEST_EXIT_CODE -eq 0 ]; then
+    echo -e "${GREEN}\nAll tests passed! Ready to commit.${RESET}"
+    exit 0
 fi
 
-echo -e "${GREEN}\nAll tests passed! Ready to commit.${RESET}"
+FAILED_TESTS=$(echo "$OUTPUT" | grep '^--- FAIL:' | awk '{print $3}')
+FAILED_PACKAGES=$(echo "$OUTPUT" | grep '^FAIL\s' | awk '{print $2}')
+
+echo -e "${RED}\nSome tests failed. Please fix them before committing.${RESET}"
+
+echo -e "${RED}\nFailed tests ($(echo "$FAILED_TESTS" | wc -l)):${RESET}"
+
+# shellcheck disable=SC2001
+echo "$FAILED_TESTS" | sed 's/^/  - /'
+
+echo -e "${RED}\nFailed packages ($(echo "$FAILED_PACKAGES" | wc -l)):${RESET}"
+
+# shellcheck disable=SC2001
+echo "$FAILED_PACKAGES" | sed 's/^/  - /'
+
+exit $TEST_EXIT_CODE
