@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.2.0"
+_VERSION="1.3.0"
 _PACKAGE="run-linter"
 _DETAILS="Runs golangci-lint to find errors in staged Go files."
 
@@ -9,12 +9,16 @@ _DETAILS="Runs golangci-lint to find errors in staged Go files."
 source ./scripts/colors.sh
 
 INSTALL=false
+STRICT=false
 ENABLE=()
 
 for FLAG in "$@"; do
     case "$FLAG" in
         --install | --i)
             INSTALL=true
+            ;;
+        --strict | --s)
+            STRICT=true
             ;;
         --enable=* | --e=*)
             ENABLE+=("${FLAG#*=}")
@@ -52,7 +56,8 @@ if (( ${#ENABLE[@]} > 0 )); then
     ARGS=(--enable "$JOINED" "${ARGS[@]}")
 fi
 
-OUTPUT=$(golangci-lint run "${ARGS[@]}")
+OUTPUT=$(golangci-lint run "${ARGS[@]}" \
+  | sed 's/\\/\//g')
 
 LINT_FILES=$(grep -oE '[^[:space:]]+\.go' <<< "$OUTPUT")
 # Check if no files contains errors
@@ -64,10 +69,14 @@ fi
 echo -e "${YELLOW}\nError report:${RESET}"
 echo "$OUTPUT"
 
+if $STRICT; then
+    echo -e "${RED}\nError: At least one staged file contains errors. Please fix them before committing.${RESET}"
+    exit 1
+fi
+
 echo -e "${YELLOW}\nChecking staged files:\n${RESET}"
 
 LINT_FILES=$(echo "$LINT_FILES" \
-  | sed 's/\\/\//g' \
   | tr -d '\r' \
   | sed -E 's/\x1B\[[0-9;]*[mK]//g')
 
@@ -78,8 +87,17 @@ STAGED_FILES=$(echo "$STAGED_FILES" \
 HAS_ERRORS=false
 while IFS= read -r FILE; do
     if grep -Fxq "$FILE" <<< "$LINT_FILES"; then
-        echo -e "File '${BOLD}$FILE${RESET}' contains errors."
         HAS_ERRORS=true
+
+        ESCAPED_FILE=$(echo "$FILE" \
+          | sed 's/\//\\\//g')
+        
+        DETAILS=$(echo "$OUTPUT" \
+          | sed -n "/$ESCAPED_FILE/,/^[[:space:]]*.*\^.*[[:space:]]*$/p" \
+          | sed 's/^/   /')
+
+        echo -e "File '${BOLD}$FILE${RESET}':\n"
+        echo -e "$DETAILS"
     fi
 done <<< "$STAGED_FILES"
 
@@ -89,4 +107,4 @@ if [ "$HAS_ERRORS" = true ]; then
     exit 1
 fi
 
-echo -e "${GREEN}\nAll Go staged files passed the linter. Ready to commit.${RESET}"
+echo -e "${GREEN}\nAll Go files passed the linter. Ready to commit.${RESET}"

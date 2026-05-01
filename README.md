@@ -141,7 +141,8 @@ By default, the script will clean the resources directory of the workspace where
 >    - **run-formatter.sh**: Format all Go files.
 >    - **run-linter.sh**: Runs `golangci-lint`  to find errors in staged Go files.
 >       - **Flags**: 
->           - **--install** | **--i**: Installs the latest version of golangci-lint if it is not already 
+>           - **--install** | **--i**: Installs the latest version of golangci-lint if it is not already.
+>            - **--strict** | **--i**: Enable strict mode. If any file, regardless of whether it is in the staging area, contains errors, the execution will be marked as failed.
 >           - **--enable=`<lnt>`** | **--e=`<lnt>`**: Enables the specific linter. Can be specified multiple times. Linters are combined as a comma-separated list.
 >       - **Dependencies**: 
 >           - **_golangci-lint_** -  _1.62.0_ (https://github.com/golangci/golangci-lint)
