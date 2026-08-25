@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.4.0"
+_VERSION="1.5.0"
 _PACKAGE="run-tests"
 _DETAILS="Run all Go tests."
 
@@ -43,7 +43,11 @@ OUTPUT=$(go test "${ARGS[@]}")
 # Capture the exit code of `go test`
 TEST_EXIT_CODE=$?
 
+TOTAL_TESTS=$(echo "$OUTPUT" | grep -c 'RUN')
+
 printf "%b\n" "$OUTPUT"
+
+echo -e "${BOLD}\nTotal tests run: ${YELLOW}${TOTAL_TESTS}${RESET}"
 
 if [ $TEST_EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}\nAll tests passed! Ready to commit.${RESET}"
@@ -51,7 +55,10 @@ if [ $TEST_EXIT_CODE -eq 0 ]; then
 fi
 
 FAILED_TESTS=$(echo "$OUTPUT" | grep '^--- FAIL:' | awk '{print $3}')
-FAILED_PACKAGES=$(echo "$OUTPUT" | grep '^FAIL\s' | awk '{print $2}')
+if [ -z "$FAILED_TESTS" ]; then
+    echo -e "${RED}\nNo specific failed tests found.${RESET}"
+    exit $TEST_EXIT_CODE
+fi
 
 echo -e "${RED}\nSome tests failed. Please fix them before committing.${RESET}"
 
@@ -59,6 +66,8 @@ echo -e "${RED}\nFailed tests ($(echo "$FAILED_TESTS" | wc -l)):${RESET}"
 
 # shellcheck disable=SC2001
 echo "$FAILED_TESTS" | sed 's/^/  - /'
+
+FAILED_PACKAGES=$(echo "$OUTPUT" | grep '^FAIL\s' | awk '{print $2}')
 
 echo -e "${RED}\nFailed packages ($(echo "$FAILED_PACKAGES" | wc -l)):${RESET}"
 
