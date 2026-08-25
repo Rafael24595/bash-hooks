@@ -24,7 +24,7 @@ jobs:
         version: ${{ steps.check.outputs.version }}
       steps:
         - name: Checkout code
-          uses: actions/checkout@v4
+          uses: actions/checkout@v6
 
         - name: Validate version format
           id: check
@@ -45,7 +45,7 @@ jobs:
       exists: ${{ steps.check.outputs.exists }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Fetch tags and check for existing tag
         id: check
@@ -67,7 +67,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Push Git Tag
         run: |
