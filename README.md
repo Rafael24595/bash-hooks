@@ -27,7 +27,7 @@ The configuration file must be named [**_pre-commit-build.yaml_**](https://githu
 
 ## Installer
 
-File name: **_install-pre-commit_**
+File name: **_bash-hooks_**
 
 By default, the script will be mounted in the same workspace where the installer is located.
 
@@ -36,80 +36,80 @@ By default, the script will be mounted in the same workspace where the installer
 - **Help**: Help command.
 
     ````bash
-    $ ./install-pre-commit -h
+    $ ./bash-hooks -h
     ````
     ````bash
-    $ ./install-pre-commit --help
+    $ ./bash-hooks --help
     ````
 
 - **Update**: Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version.
 
     ````bash
-    $ ./install-pre-commit -u
+    $ ./bash-hooks -u
     ````
     ````bash
-    $ ./install-pre-commit --update=tag
+    $ ./bash-hooks --update=tag
     ````
 
 - **Version**: Shows actual installer version.
 
     ````bash
-    $ ./install-pre-commit -v
+    $ ./bash-hooks -v
     ````
     ````bash
-    $ ./install-pre-commit --version
+    $ ./bash-hooks --version
     ````
 - **Test**: The script will be mounted inside the remote-scripts directory to prevent it from being used by Git.
 
     ````bash
-    $ ./install-pre-commit -t
+    $ ./bash-hooks -t
     ````
 - **Enable**: Disables the hook if exists otherwise creates it disabled.
 
     ````bash
-    $ ./install-pre-commit -d
+    $ ./bash-hooks -d
     ````
 - **disable**: Enables the hook if exists otherwise creates it enabled.
 
     ````bash
-    $ ./install-pre-commit -e
+    $ ./bash-hooks -e
     ````
 - **Workspace**: Defines the workspace where the script will be placed.
 
     ````bash
-    $ ./install-pre-commit --workspace=../other_project/my_project
+    $ ./bash-hooks --workspace=../other_project/my_project
     ````
 - **Input**: Defines the directory and name where the input file is located.
 
     ````bash
-    $ ./install-pre-commit --input=.test.yaml
+    $ ./bash-hooks --input=.test.yaml
     ````
 
 - **Output**: Defines directory and name where the script will be placed.
 
     ````bash
-    $ ./install-pre-commit --output=.test.sh
+    $ ./bash-hooks --output=.test.sh
     ````
 
 - **Block**: Generates the script as a single file without imports.
 
     ````bash
-    $ ./install-pre-commit -b
+    $ ./bash-hooks -b
     ````
     ````bash
-    $ ./install-pre-commit --block
+    $ ./bash-hooks --block
     ````
 
 - **Mode**: Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push.
 
     ````bash
-    $ ./install-pre-commit --mode=pre_commit
+    $ ./bash-hooks --mode=pre_commit
     ````
 
 - **Pull**: Downloads the specified remote script at the given version.
 
     ````bash
-    $ ./install-pre-commit --pull=golang/sh/run-govulncheck.sh:0.6.3
+    $ ./bash-hooks --pull=golang/sh/run-govulncheck.sh:0.6.3
     ````
 
 ## Cleaner
