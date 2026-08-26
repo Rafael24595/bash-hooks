@@ -35,82 +35,87 @@ By default, the script will be mounted in the same workspace where the installer
 
 - **Help**: Help command.
 
-    ````bash
+    ```bash
     $ ./bash-hooks -h
-    ````
-    ````bash
+    ```
+    ```bash
     $ ./bash-hooks --help
-    ````
+    ```
 
 - **Update**: Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version.
 
-    ````bash
+    ```bash
     $ ./bash-hooks -u
-    ````
-    ````bash
+    ```
+    ```bash
     $ ./bash-hooks --update=tag
-    ````
+    ```
 
 - **Version**: Shows actual installer version.
 
-    ````bash
+    ```bash
     $ ./bash-hooks -v
-    ````
-    ````bash
+    ```
+    ```bash
     $ ./bash-hooks --version
-    ````
+    ```
+
 - **Test**: The script will be mounted inside the remote-scripts directory to prevent it from being used by Git.
 
-    ````bash
+    ```bash
     $ ./bash-hooks -t
-    ````
+    ```
+
 - **Enable**: Disables the hook if exists otherwise creates it disabled.
 
-    ````bash
+    ```bash
     $ ./bash-hooks -d
-    ````
+    ```
+
 - **disable**: Enables the hook if exists otherwise creates it enabled.
 
-    ````bash
+    ```bash
     $ ./bash-hooks -e
-    ````
+    ```
+
 - **Workspace**: Defines the workspace where the script will be placed.
 
-    ````bash
+    ```bash
     $ ./bash-hooks --workspace=../other_project/my_project
-    ````
+    ```
+    
 - **Input**: Defines the directory and name where the input file is located.
 
-    ````bash
+    ```bash
     $ ./bash-hooks --input=.test.yaml
-    ````
+    ```
 
 - **Output**: Defines directory and name where the script will be placed.
 
-    ````bash
+    ```bash
     $ ./bash-hooks --output=.test.sh
-    ````
+    ```
 
 - **Block**: Generates the script as a single file without imports.
 
-    ````bash
+    ```bash
     $ ./bash-hooks -b
-    ````
-    ````bash
+    ```
+    ```bash
     $ ./bash-hooks --block
-    ````
+    ```
 
 - **Mode**: Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push.
 
-    ````bash
+    ```bash
     $ ./bash-hooks --mode=pre_commit
-    ````
+    ```
 
 - **Pull**: Downloads the specified remote script at the given version.
 
-    ````bash
+    ```bash
     $ ./bash-hooks --pull=golang/sh/run-govulncheck.sh:0.6.3
-    ````
+    ```
 
 ## Cleaner
 
@@ -122,9 +127,9 @@ By default, the script will clean the resources directory of the workspace where
 
 - Workspace: Defines the workspace resources directory that will be cleaned.
 
-    ````bash
+    ```bash
     $ ./clear-resources --workspace=../other_project/my_project
-    ````
+    ```
 
 ## Packages
 
