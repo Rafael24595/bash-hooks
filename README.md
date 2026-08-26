@@ -25,9 +25,116 @@ The configuration file must be named [**_pre-commit-build.yaml_**](https://githu
 
 **_See the template example:_** [**_pre-commit-build.template.yaml_**](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml)
 
+## Global Installer
+
+The global installer installs the [**_bash-hooks_**](https://github.com/Rafael24595/bash-hooks) script in the user's local binary directory and adds it to the Bash `PATH`.
+
+By default, the script is installed in:
+
+```text
+~/.local/bin/bash-hooks/bash-hooks
+```
+
+The installer also configures the following directory in **_~/.bashrc_**:
+
+```text
+~/.local/bin/bash-hooks
+```
+
+After installation, the **_bash-hooks_** command can be executed from any workspace.
+
+**Arguments:**
+
+- **Help**: Displays the available installer commands.
+
+    ```bash
+    $ ./install.sh -h
+    ```
+    ```bash
+    $ ./install.sh --help
+    ```
+
+- **Version**: Shows the current global installer version.
+
+    ```bash
+    $ ./install.sh -v
+    ```
+    ```bash
+    $ ./install.sh --version
+    ```
+
+- **Install**: Installs the local **_bash-hooks_** script.
+
+    ```bash
+    $ ./install.sh -i
+    ```
+    ```bash
+    $ ./install.sh --install
+    ```
+
+    If no argument is specified, the installer performs the installation by default.
+
+    ```bash
+    $ ./install.sh
+    ```
+
+- **Remote**: Downloads the **_bash-hooks_** script from GitHub and installs it globally.
+
+    > **Compatibility:** The `--remote` option can only install **_bash-hooks_** from version **_0.16.0_** onwards. Before version **_0.16.0_**, the script was named **_install-pre-commit_**, so remote installation of those versions is not supported by this installer.
+
+    ```bash
+    $ ./install.sh -r
+    ```
+    ```bash
+    $ ./install.sh --remote
+    ```
+
+    By default, the latest version available in the main branch is downloaded.
+    A specific version can be installed by specifying its tag:
+
+    ```bash
+    $ ./install.sh -r=0.16.0
+    ```
+    ```bash
+    $ ./install.sh --remote=0.16.0
+    ```
+
+- **Uninstall**: Removes the globally installed **_bash-hooks_** script and its corresponding `PATH` configuration from **_~/.bashrc_**.
+
+    ```bash
+    $ ./install.sh -u
+    ```
+    ```bash
+    $ ./install.sh --uninstall
+    ```
+
+    By default, the latest version available in the main branch is downloaded.
+    A specific version can be installed by specifying its tag:
+
+    ```bash
+    $ ./install.sh -r=0.16.0
+    ```
+    ```bash
+    $ ./install.sh --remote=0.16.0
+    ```
+
+After installation, reload the Bash configuration to make the command available in the current terminal:
+
+```bash
+$ source ~/.bashrc
+```
+
+Alternatively, open a new terminal.
+
+Once installed, bash-hooks can be executed directly from any workspace:
+
+```bash
+$ bash-hooks
+```
+
 ## Installer
 
-File name: **_install-pre-commit_**
+File name: **_bash-hooks_**
 
 By default, the script will be mounted in the same workspace where the installer is located.
 
@@ -35,82 +142,87 @@ By default, the script will be mounted in the same workspace where the installer
 
 - **Help**: Help command.
 
-    ````bash
-    $ ./install-pre-commit -h
-    ````
-    ````bash
-    $ ./install-pre-commit --help
-    ````
+    ```bash
+    $ ./bash-hooks -h
+    ```
+    ```bash
+    $ ./bash-hooks --help
+    ```
 
 - **Update**: Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version.
 
-    ````bash
-    $ ./install-pre-commit -u
-    ````
-    ````bash
-    $ ./install-pre-commit --update=tag
-    ````
+    ```bash
+    $ ./bash-hooks -u
+    ```
+    ```bash
+    $ ./bash-hooks --update=tag
+    ```
 
 - **Version**: Shows actual installer version.
 
-    ````bash
-    $ ./install-pre-commit -v
-    ````
-    ````bash
-    $ ./install-pre-commit --version
-    ````
+    ```bash
+    $ ./bash-hooks -v
+    ```
+    ```bash
+    $ ./bash-hooks --version
+    ```
+
 - **Test**: The script will be mounted inside the remote-scripts directory to prevent it from being used by Git.
 
-    ````bash
-    $ ./install-pre-commit -t
-    ````
+    ```bash
+    $ ./bash-hooks -t
+    ```
+
 - **Enable**: Disables the hook if exists otherwise creates it disabled.
 
-    ````bash
-    $ ./install-pre-commit -d
-    ````
+    ```bash
+    $ ./bash-hooks -d
+    ```
+
 - **disable**: Enables the hook if exists otherwise creates it enabled.
 
-    ````bash
-    $ ./install-pre-commit -e
-    ````
+    ```bash
+    $ ./bash-hooks -e
+    ```
+
 - **Workspace**: Defines the workspace where the script will be placed.
 
-    ````bash
-    $ ./install-pre-commit --workspace=../other_project/my_project
-    ````
+    ```bash
+    $ ./bash-hooks --workspace=../other_project/my_project
+    ```
+    
 - **Input**: Defines the directory and name where the input file is located.
 
-    ````bash
-    $ ./install-pre-commit --input=.test.yaml
-    ````
+    ```bash
+    $ ./bash-hooks --input=.test.yaml
+    ```
 
 - **Output**: Defines directory and name where the script will be placed.
 
-    ````bash
-    $ ./install-pre-commit --output=.test.sh
-    ````
+    ```bash
+    $ ./bash-hooks --output=.test.sh
+    ```
 
 - **Block**: Generates the script as a single file without imports.
 
-    ````bash
-    $ ./install-pre-commit -b
-    ````
-    ````bash
-    $ ./install-pre-commit --block
-    ````
+    ```bash
+    $ ./bash-hooks -b
+    ```
+    ```bash
+    $ ./bash-hooks --block
+    ```
 
 - **Mode**: Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push.
 
-    ````bash
-    $ ./install-pre-commit --mode=pre_commit
-    ````
+    ```bash
+    $ ./bash-hooks --mode=pre_commit
+    ```
 
 - **Pull**: Downloads the specified remote script at the given version.
 
-    ````bash
-    $ ./install-pre-commit --pull=golang/sh/run-govulncheck.sh:0.6.3
-    ````
+    ```bash
+    $ ./bash-hooks --pull=golang/sh/run-govulncheck.sh:0.6.3
+    ```
 
 ## Cleaner
 
@@ -122,9 +234,9 @@ By default, the script will clean the resources directory of the workspace where
 
 - Workspace: Defines the workspace resources directory that will be cleaned.
 
-    ````bash
+    ```bash
     $ ./clear-resources --workspace=../other_project/my_project
-    ````
+    ```
 
 ## Packages
 

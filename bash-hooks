@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.15.0"
+_VERSION="0.16.0"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,6 +15,8 @@ RED="\033[0;31m"
 GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
 RESET="\033[0m"
+
+INSTALLER_NAME="$(basename "$0")"
 
 DEFAULT_HOOK_MODE="pre-commit"
 DEFAULT_INPUT_FILE="pre-commit-build.yaml"
@@ -79,7 +81,7 @@ clean_output() {
 
 print_help() {
     echo -e "\nUsage:"
-    echo -e "  install-pre-commit [flags]"
+    echo -e "  $INSTALLER_NAME [flags]"
     echo -e "\nFlags:"
     echo -e "  -h --help                   $YELLOW Help command. $RESET"
     echo -e "  -v --version                $YELLOW Shows actual installer version. $RESET"
@@ -150,7 +152,7 @@ for ARG in "$@"; do
       REMOTE_LOCATION="."
       ;;
     --version* | -v)
-      echo "install-pre-commit version $_VERSION ($_REPOSITORY)"
+      echo "$INSTALLER_NAME version $_VERSION ($_REPOSITORY)"
       exit 0
       ;;
     --update=*)
@@ -577,7 +579,12 @@ update_installer() {
     if [[ -z "$VERSION" ]]; then
         VERSION="latest"
     else
-        read -r -p "$(echo -e "\n${YELLOW}Be careful, the update flag was implemented in version 0.0.5. The command cannot be recognized in earlier versions. Do you want to continue? (y/n): ${RESET}")" RESPONSE
+        echo -e "\n${YELLOW}Be careful, some changes may not be compatible with older versions:${RESET}"
+        echo -e "\n - ${YELLOW}The update flag was implemented in version 0.0.5. The command cannot be recognized in earlier versions.${RESET}"
+        echo -e "\n - ${YELLOW}The installer name was changed in version 0.16.0 from 'install-pre-commit' to '$INSTALLER_NAME'.${RESET}"
+        echo -e "\n - ${YELLOW}The update process may modify the current bash-hooks installation.${RESET}"
+
+        read -r -p "$(echo -e "\n\n${YELLOW}Do you want to continue? (y/n): ${RESET}")" RESPONSE
         RESPONSE=$(echo "$RESPONSE" | tr '[:upper:]' '[:lower:]')
 
         if [[ "$RESPONSE" == "yes" ]] || [[ "$RESPONSE" == "y" ]]; then
@@ -590,7 +597,7 @@ update_installer() {
         REFERENCE="tags/${VERSION}"
     fi
 
-    FILE_URL="https://raw.githubusercontent.com/Rafael24595/bash-hooks/refs/${REFERENCE}/install-pre-commit"
+    FILE_URL="https://raw.githubusercontent.com/Rafael24595/bash-hooks/refs/${REFERENCE}/${INSTALLER_NAME}"
 
     echo -e "\nUpdating installer to ${BOLD}${VERSION}${RESET} version from ${BOLD}'${FILE_URL}'${RESET}..."
 
@@ -601,7 +608,7 @@ update_installer() {
 
     echo -e "${GREEN}Installer updated successfully.${RESET}\n"
 
-    SCRIPT="${_CURRENT_LOCATION}/install-pre-commit"
+    SCRIPT="${_CURRENT_LOCATION}/${INSTALLER_NAME}"
 
     touch "$SCRIPT"
 
