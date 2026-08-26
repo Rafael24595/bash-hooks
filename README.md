@@ -25,6 +25,113 @@ The configuration file must be named [**_pre-commit-build.yaml_**](https://githu
 
 **_See the template example:_** [**_pre-commit-build.template.yaml_**](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml)
 
+## Global Installer
+
+The global installer installs the [**_bash-hooks_**](https://github.com/Rafael24595/bash-hooks) script in the user's local binary directory and adds it to the Bash `PATH`.
+
+By default, the script is installed in:
+
+```text
+~/.local/bin/bash-hooks/bash-hooks
+```
+
+The installer also configures the following directory in **_~/.bashrc_**:
+
+```text
+~/.local/bin/bash-hooks
+```
+
+After installation, the **_bash-hooks_** command can be executed from any workspace.
+
+**Arguments:**
+
+- **Help**: Displays the available installer commands.
+
+    ```bash
+    $ ./install.sh -h
+    ```
+    ```bash
+    $ ./install.sh --help
+    ```
+
+- **Version**: Shows the current global installer version.
+
+    ```bash
+    $ ./install.sh -v
+    ```
+    ```bash
+    $ ./install.sh --version
+    ```
+
+- **Install**: Installs the local **_bash-hooks_** script.
+
+    ```bash
+    $ ./install.sh -i
+    ```
+    ```bash
+    $ ./install.sh --install
+    ```
+
+    If no argument is specified, the installer performs the installation by default.
+
+    ```bash
+    $ ./install.sh
+    ```
+
+- **Remote**: Downloads the **_bash-hooks_** script from GitHub and installs it globally.
+
+    > **Compatibility:** The `--remote` option can only install **_bash-hooks_** from version **_0.16.0_** onwards. Before version **_0.16.0_**, the script was named **_install-pre-commit_**, so remote installation of those versions is not supported by this installer.
+
+    ```bash
+    $ ./install.sh -r
+    ```
+    ```bash
+    $ ./install.sh --remote
+    ```
+
+    By default, the latest version available in the main branch is downloaded.
+    A specific version can be installed by specifying its tag:
+
+    ```bash
+    $ ./install.sh -r=0.16.0
+    ```
+    ```bash
+    $ ./install.sh --remote=0.16.0
+    ```
+
+- **Uninstall**: Removes the globally installed **_bash-hooks_** script and its corresponding `PATH` configuration from **_~/.bashrc_**.
+
+    ```bash
+    $ ./install.sh -u
+    ```
+    ```bash
+    $ ./install.sh --uninstall
+    ```
+
+    By default, the latest version available in the main branch is downloaded.
+    A specific version can be installed by specifying its tag:
+
+    ```bash
+    $ ./install.sh -r=0.16.0
+    ```
+    ```bash
+    $ ./install.sh --remote=0.16.0
+    ```
+
+After installation, reload the Bash configuration to make the command available in the current terminal:
+
+```bash
+$ source ~/.bashrc
+```
+
+Alternatively, open a new terminal.
+
+Once installed, bash-hooks can be executed directly from any workspace:
+
+```bash
+$ bash-hooks
+```
+
 ## Installer
 
 File name: **_bash-hooks_**
