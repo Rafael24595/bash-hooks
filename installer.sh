@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 
 # Color codes
 BOLD="\033[1m"
@@ -107,8 +107,10 @@ install() {
     if [[ -f "$DESTINATION" ]]; then
         OLD_VERSION="$(get_installed_version)"
 
-        read -r -p "$(echo -e "\nAnother version of the script ${YELLOW}$OLD_VERSION${RESET} is already installed. Do you want to overwrite it? (y/n):")" RESPONSE
+        read -r -p "$(echo -e " Another version of the script (${YELLOW}$OLD_VERSION${RESET}) is already installed. Do you want to overwrite it? (y/n): ")" RESPONSE
         RESPONSE=$(echo "$RESPONSE" | tr '[:upper:]' '[:lower:]')
+
+        echo
 
         case "$RESPONSE" in
             yes | y)
@@ -151,7 +153,7 @@ install() {
 
         echo -e "  ${GREEN}✓ Bash PATH configured.${RESET}"
     else
-        echo -e "  ${YELLOW}~/$TARGET_DIR is already configured in $BASHRC.${RESET}"
+        echo -e "  ${YELLOW}• ~/$TARGET_DIR is already configured in $BASHRC.${RESET}"
     fi
 
     echo -e "\n${BOLD}==========================================${RESET}"
@@ -178,7 +180,8 @@ remote_install() {
 
     SCRIPT="$(mktemp "${TMPDIR:-/tmp}/bash-hooks.XXXXXX")"
 
-    trap 'rm -f "$SCRIPT"' EXIT
+    # shellcheck disable=SC2064
+    trap "rm -f '$SCRIPT'" EXIT
 
     download "$VERSION" "$SCRIPT"
     install "$SCRIPT"
@@ -206,7 +209,7 @@ uninstall() {
         echo -e "\n${RED}Error: '$DESTINATION' exists and is not a regular file.${RESET}" >&2
         exit 1
     else
-       echo -e "  ${YELLOW}Script is not installed.${RESET}"
+       echo -e "  ${YELLOW}• Script is not installed.${RESET}"
     fi
 
     if [[ -f "$BASHRC" ]]; then
@@ -219,7 +222,7 @@ uninstall() {
 
             PATH_REMOVED=true
         else
-            echo -e "  ${YELLOW}~/$TARGET_DIR is not configured in $BASHRC.${RESET}"
+            echo -e "  ${YELLOW}• ~/$TARGET_DIR is not configured in $BASHRC.${RESET}"
         fi
     fi
 
@@ -231,7 +234,7 @@ uninstall() {
         echo "Removed:"
         echo -e "  ${YELLOW}$DESTINATION${RESET}"
     else
-        echo "Script was not found: ${YELLOW}$DESTINATION${RESET}"
+        echo -e "Script was not found: ${YELLOW}$DESTINATION${RESET}"
     fi
 
     echo
