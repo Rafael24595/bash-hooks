@@ -178,7 +178,8 @@ remote_install() {
 
     SCRIPT="$(mktemp "${TMPDIR:-/tmp}/bash-hooks.XXXXXX")"
 
-    trap 'rm -f "$SCRIPT"' EXIT
+    # shellcheck disable=SC2064
+    trap "rm -f '$SCRIPT'" EXIT
 
     download "$VERSION" "$SCRIPT"
     install "$SCRIPT"
