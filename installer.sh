@@ -232,7 +232,7 @@ uninstall() {
         echo "Removed:"
         echo -e "  ${YELLOW}$DESTINATION${RESET}"
     else
-        echo "Script was not found: ${YELLOW}$DESTINATION${RESET}"
+        echo -e "Script was not found: ${YELLOW}$DESTINATION${RESET}"
     fi
 
     echo
