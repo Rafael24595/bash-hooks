@@ -26,7 +26,7 @@ REMOTE_LOCATION=".remote-scripts"
 
 IS_TEST=false
 
-BLOCK_PACKAGES="#!/bin/sh"
+BLOCK_PACKAGES="#!/bin/bash"
 IS_BLOCK=false
 
 WORKSPACE="."
