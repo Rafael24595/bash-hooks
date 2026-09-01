@@ -27,11 +27,13 @@ echo -e "${BOLD}\nRunning Go tests...\n${RESET}"
 
 ARGS=(-v -failfast ./...)
 if [ "$RACE" = true ]; then
+    echo -e "  ${GREEN}✓ Race detection enabled.${RESET}"
     ARGS=(-race "${ARGS[@]}")
 fi
 
 if (( ${#TAGS[@]} > 0 )); then
     JOINED=$(IFS=,; echo "${TAGS[*]}")
+    echo -e "  ${GREEN}✓ Tags specified: ${YELLOW}${JOINED}${RESET}"
     ARGS=(-tags="$JOINED" "${ARGS[@]}")
 fi
 
