@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="0.16.1"
+_VERSION="0.17.0"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,7 +26,7 @@ REMOTE_LOCATION=".remote-scripts"
 
 IS_TEST=false
 
-BLOCK_PACKAGES="#!/bin/sh"
+BLOCK_PACKAGES="#!/bin/bash"
 IS_BLOCK=false
 
 WORKSPACE="."
@@ -62,6 +62,7 @@ SOURCE_PULL_PACKAGE=""
 
 DISABLE_HOOK_STATUS=-1
 DISABLE_HOOK=false
+HOOKS_TO_UPDATE=()
 
 # -------------- #
 # MISC FUNCTIONS #
@@ -151,7 +152,7 @@ for ARG in "$@"; do
       SOURCE_PULL_PACKAGE="${ARG#--pull=}"
       REMOTE_LOCATION="."
       ;;
-    --version* | -v)
+    --version | -v)
       echo "$INSTALLER_NAME version $_VERSION ($_REPOSITORY)"
       exit 0
       ;;
@@ -159,16 +160,26 @@ for ARG in "$@"; do
       SOURCE_UPDATE_VERSION="${ARG#*=}"
       EXECUTE_UPDATE=true
       ;;
-    --update* | -u)
+    --update | -u)
       EXECUTE_UPDATE=true
       ;;
-    --enable* | -e)
+    --enable | -e)
       DISABLE_HOOK_STATUS=0
       ;;
-    --disable* | -d)
+    --enable=* | -e=*)
+        DISABLE_HOOK_STATUS=0
+        IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
+        HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
+        ;;
+    --disable | -d)
       DISABLE_HOOK_STATUS=1
       ;;
-    --help* | -h)
+    --disable=* | -d=*)
+        DISABLE_HOOK_STATUS=1
+        IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
+        HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
+        ;;
+    --help | -h)
       print_help
       exit 0
       ;;
@@ -178,23 +189,87 @@ done
 INPUT_FILE="${WORKSPACE}/${INPUT_FILE}"
 OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
 
-if [[ "$DISABLE_HOOK_STATUS" != -1 ]]; then
-    DISABLE_HOOK=$([[ "$DISABLE_HOOK_STATUS" -eq 1 ]] && echo true || echo false)
-    if [[ -f "$OUTPUT_FILE" ]]; then
-        echo -e "Update hook '$OUTPUT_FILE' status to $DISABLE_HOOK"
-        sed -i "s/DISABLED_HOOK=.*/DISABLED_HOOK=$DISABLE_HOOK/g" "$OUTPUT_FILE"
-        sed -i "s/^DISABLED_HOOK=.*/DISABLED_HOOK=$DISABLE_HOOK/" "$OUTPUT_FILE"
-        exit 0
-    fi
-fi
-
-mkdir -p "$(dirname "$OUTPUT_FILE")"
-touch "$OUTPUT_FILE"
-chmod +x "$OUTPUT_FILE"
-
 # --------- #
 # FUNCTIONS #
 # --------- #
+
+format_hook_name() {
+    local SCRIPT_ID="$1"
+
+    SCRIPT_ID="${SCRIPT_ID^^}"
+    SCRIPT_ID="${SCRIPT_ID//-/_}"
+
+    echo "HOOK_${SCRIPT_ID}"
+}
+
+update_hook_variable() {
+    local HOOK_NAME=$1
+    local NEW_STATE=$2
+    local TEMP_FILE="${OUTPUT_FILE}.tmp"
+
+    if [[ ! -f "$OUTPUT_FILE" ]]; then
+        echo -e "${RED}Hook '$OUTPUT_FILE' does not exist.${RESET}"
+        return 1
+    fi
+
+    if ! sed "s/^${HOOK_NAME}=.*/${HOOK_NAME}=${NEW_STATE}/" "$OUTPUT_FILE" > "$TEMP_FILE"; then
+        echo -e "${RED}Failed to update hook '$OUTPUT_FILE'.${RESET}"
+        rm -f "$TEMP_FILE"
+        return 1
+    fi
+
+    if ! mv "$TEMP_FILE" "$OUTPUT_FILE"; then
+        echo -e "${RED}Failed to replace hook '$OUTPUT_FILE'.${RESET}"
+        rm -f "$TEMP_FILE"
+        return 1
+    fi
+}
+
+update_global_hook_state() {
+    local NEW_STATE
+
+    NEW_STATE=$([[ "$DISABLE_HOOK_STATUS" -eq 1 ]] && echo true || echo false)
+
+    if ! update_hook_variable "DISABLED_HOOK" "$NEW_STATE"; then
+        echo -e "${RED}Failed to update global hook state.${RESET}"
+        return 1
+    fi
+
+    if [[ "${NEW_STATE}" == true ]]; then
+        echo -e "${YELLOW}The hook '${OUTPUT_FILE}' has been disabled.${RESET}"
+    else
+        echo -e "${YELLOW}The hook '${OUTPUT_FILE}' has been enabled.${RESET}"
+    fi
+}
+
+update_single_hook_state() {
+     for HOOK_ID in "${HOOKS_TO_UPDATE[@]}"; do
+        local HOOK_NAME
+        local NEW_STATE
+
+        HOOK_NAME=$(format_hook_name "$HOOK_ID")
+        NEW_STATE=$([[ "$DISABLE_HOOK_STATUS" -eq 0 ]] && echo true || echo false)
+
+        if ! update_hook_variable "$HOOK_NAME" "$NEW_STATE"; then
+            echo -e "${RED}Failed to update hook '${HOOK_ID}'.${RESET}"
+            return 1
+        fi
+
+        if [[ "${NEW_STATE}" == true ]]; then
+            echo -e "${YELLOW}The hook '${HOOK_ID}' has been enabled.${RESET}"
+        else
+            echo -e "${YELLOW}The hook '${HOOK_ID}' has been disabled.${RESET}"
+        fi
+    done
+}
+
+update_hooks_state() {
+    if (( ${#HOOKS_TO_UPDATE[@]} > 0 )); then
+        update_single_hook_state
+    else
+        update_global_hook_state
+    fi
+}
 
 format_package_name() {
     local PACKAGE="$1"
@@ -210,13 +285,15 @@ format_package_name() {
 }
 
 log_script_execution() {
-    local SCRIPT=$1
-    local EXPECT=$2
-    local RETURN=$3
-    local ARGS=$4
-    local FLAGS=$5
-    local IS_REMOTE=$6
+    local SCRIPT_ID=$1
+    local SCRIPT=$2
+    local EXPECT=$3
+    local RETURN=$4
+    local ARGS=$5
+    local FLAGS=$6
+    local IS_REMOTE=$7
 
+    local HOOK_NAME
     local LOG_DIRECTION="ne"
     local LOG_RETURN=1
 
@@ -253,13 +330,19 @@ log_script_execution() {
         LOG_FLAGS=" $LOG_FLAGS"
     fi
 
+    HOOK_NAME=$(format_hook_name "$SCRIPT_ID")
+
     {
-        echo -e "\nprintf \"\${BOLD}\\\\nExecuting '${SCRIPT}' script...\${RESET}\\\\n\"" 
-        echo "$SCRIPT$ARGS$LOG_FLAGS"
-        echo "if [ \$? -${LOG_DIRECTION} 0 ]; then"
-        echo "    exit ${LOG_RETURN}"
-        echo 'fi'
-        echo -e "printf \"\${BOLD}\\\\n <-----------------> \\\\n\${RESET}\""
+        echo
+        echo -e "${HOOK_NAME}=true"
+        echo -e "if [ \"\${$HOOK_NAME}\" == true ]; then"
+        echo -e "  printf \"\${BOLD}\\\\nExecuting '${SCRIPT}' script...\${RESET}\\\\n\""
+        echo -e "  $SCRIPT$ARGS$LOG_FLAGS"
+        echo -e "  if [ \$? -${LOG_DIRECTION} 0 ]; then"
+        echo -e "      exit ${LOG_RETURN}"
+        echo -e "  fi"
+        echo -e "  printf \"\${BOLD}\\\\n <-----------------> \\\\n\${RESET}\""
+        echo -e "fi"
     } >> "$OUTPUT_FILE"
 }
 
@@ -420,7 +503,7 @@ load_remote_scripts() {
 
         fetch_write_remote_file "$PROJECT" "$FILE_URL" "$LOCATION" true
         
-        log_script_execution "$LOCATION" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" true
+        log_script_execution "$REPO_ID" "$LOCATION" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" true
 
         COUNT_REMOTE=$((COUNT_REMOTE + 1))
         if [ -n "$LIST_REMOTE" ]; then
@@ -543,7 +626,7 @@ load_local_scripts() {
 
         file_must_exists "$LOCATION"
 
-        log_script_execution "$SCRIPT" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" false
+        log_script_execution "$SCRIPT_ID" "$SCRIPT" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" false
 
         chmod +x "$LOCATION"
 
@@ -601,7 +684,6 @@ update_installer() {
 
     echo -e "\nUpdating installer to ${BOLD}${VERSION}${RESET} version from ${BOLD}'${FILE_URL}'${RESET}..."
 
-    CONTENT=$(curl -sf "$FILE_URL")
     if ! CONTENT=$(curl -sf "$FILE_URL") ; then
         exit_error "Failed to retrieve script from GitHub."
     fi
@@ -634,6 +716,21 @@ pull_source() {
 
     fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME" 0
 }
+
+
+mkdir -p "$(dirname "$OUTPUT_FILE")"
+touch "$OUTPUT_FILE"
+
+# ----------- #
+# HOOKS STATE #
+# ----------- #
+
+if [[ "$DISABLE_HOOK_STATUS" != -1 ]]; then
+    update_hooks_state
+    exit 0
+fi
+
+chmod +x "$OUTPUT_FILE"
 
 # ----------------- #
 # BUILDING PROCCESS #

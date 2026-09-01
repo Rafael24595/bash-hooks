@@ -173,16 +173,22 @@ By default, the script will be mounted in the same workspace where the installer
     $ ./bash-hooks -t
     ```
 
-- **Enable**: Disables the hook if exists otherwise creates it disabled.
+- **Enable**: Disables the hook if exists otherwise creates it disabled. You can also specify one or more hook IDs to enable only those scripts. 
 
     ```bash
-    $ ./bash-hooks -d
+    $ ./bash-hooks --enable
+    $ ./bash-hooks -e
+    $ ./bash-hooks -e=check-staged 
+    $ ./bash-hooks --enable=check-staged,run-linter
     ```
 
-- **disable**: Enables the hook if exists otherwise creates it enabled.
+- **disable**: Enables the hook if exists otherwise creates it enabled. You can also specify one or more hook IDs to disable only those scripts.
 
     ```bash
-    $ ./bash-hooks -e
+    $ ./bash-hooks --disable
+    $ ./bash-hooks -d
+    $ ./bash-hooks -d=check-staged 
+    $ ./bash-hooks --disable=check-staged,run-linter
     ```
 
 - **Workspace**: Defines the workspace where the script will be placed.
@@ -262,6 +268,7 @@ By default, the script will clean the resources directory of the workspace where
 >       - **Flags**: 
 >           - **--tags=`<tag>`** | **--t=`<tag>`**: Defines the test build tags. Can be specified multiple times. Tags are combined as a comma-separated list.
 >           - **--race** | **--r**: Runs the tests using the race detector.
+>           - **--cover=`<threshold>`** | **--c=`<threshold>`**: Runs the tests with coverage analysis. If a threshold is specified, the test will fail if the coverage is below that value. The threshold can be defined as a percentage (e.g., `80.0`) or as an absolute number of statements (e.g., `100`).
 >    - **run-govulncheck.sh**: Executes `govulncheck` to check for vulnerabilities in dependencies.
 >       - **Flags**: 
 >           - **--install**: Installs the latest version of govulncheck if it is not already installed
