@@ -178,23 +178,49 @@ done
 INPUT_FILE="${WORKSPACE}/${INPUT_FILE}"
 OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
 
-if [[ "$DISABLE_HOOK_STATUS" != -1 ]]; then
-    DISABLE_HOOK=$([[ "$DISABLE_HOOK_STATUS" -eq 1 ]] && echo true || echo false)
-    if [[ -f "$OUTPUT_FILE" ]]; then
-        echo -e "Update hook '$OUTPUT_FILE' status to $DISABLE_HOOK"
-        sed -i "s/DISABLED_HOOK=.*/DISABLED_HOOK=$DISABLE_HOOK/g" "$OUTPUT_FILE"
-        sed -i "s/^DISABLED_HOOK=.*/DISABLED_HOOK=$DISABLE_HOOK/" "$OUTPUT_FILE"
-        exit 0
-    fi
-fi
-
-mkdir -p "$(dirname "$OUTPUT_FILE")"
-touch "$OUTPUT_FILE"
-chmod +x "$OUTPUT_FILE"
-
 # --------- #
 # FUNCTIONS #
 # --------- #
+
+update_hook_variable() {
+    local HOOK_NAME=$1
+    local NEW_STATE=$2
+    local TEMP_FILE="${OUTPUT_FILE}.tmp"
+
+    if [[ ! -f "$OUTPUT_FILE" ]]; then
+        echo -e "${RED}Hook '$OUTPUT_FILE' does not exist.${RESET}"
+        return 1
+    fi
+
+    if ! sed "s/^${HOOK_NAME}=.*/${HOOK_NAME}=${NEW_STATE}/" "$OUTPUT_FILE" > "$TEMP_FILE"; then
+        echo -e "${RED}Failed to update hook '$OUTPUT_FILE'.${RESET}"
+        rm -f "$TEMP_FILE"
+        return 1
+    fi
+
+    if ! mv "$TEMP_FILE" "$OUTPUT_FILE"; then
+        echo -e "${RED}Failed to replace hook '$OUTPUT_FILE'.${RESET}"
+        rm -f "$TEMP_FILE"
+        return 1
+    fi
+}
+
+update_global_hook_state() {
+    local NEW_STATE
+
+    NEW_STATE=$([[ "$DISABLE_HOOK_STATUS" -eq 1 ]] && echo true || echo false)
+
+    if ! update_hook_variable "DISABLED_HOOK" "$NEW_STATE"; then
+        echo -e "${RED}Failed to update global hook state.${RESET}"
+        return 1
+    fi
+
+    if [[ "${NEW_STATE}" == true ]]; then
+        echo -e "${YELLOW}The hook '${OUTPUT_FILE}' has been disabled.${RESET}"
+    else
+        echo -e "${YELLOW}The hook '${OUTPUT_FILE}' has been enabled.${RESET}"
+    fi
+}
 
 format_package_name() {
     local PACKAGE="$1"
@@ -633,6 +659,21 @@ pull_source() {
 
     fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME" 0
 }
+
+
+mkdir -p "$(dirname "$OUTPUT_FILE")"
+touch "$OUTPUT_FILE"
+
+# ----------- #
+# HOOKS STATE #
+# ----------- #
+
+if [[ "$DISABLE_HOOK_STATUS" != -1 ]]; then
+    update_global_hook_state
+    exit 0
+fi
+
+chmod +x "$OUTPUT_FILE"
 
 # ----------------- #
 # BUILDING PROCCESS #
