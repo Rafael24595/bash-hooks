@@ -151,7 +151,7 @@ for ARG in "$@"; do
       SOURCE_PULL_PACKAGE="${ARG#--pull=}"
       REMOTE_LOCATION="."
       ;;
-    --version* | -v)
+    --version | -v)
       echo "$INSTALLER_NAME version $_VERSION ($_REPOSITORY)"
       exit 0
       ;;
@@ -159,16 +159,16 @@ for ARG in "$@"; do
       SOURCE_UPDATE_VERSION="${ARG#*=}"
       EXECUTE_UPDATE=true
       ;;
-    --update* | -u)
+    --update | -u)
       EXECUTE_UPDATE=true
       ;;
-    --enable* | -e)
+    --enable | -e)
       DISABLE_HOOK_STATUS=0
       ;;
-    --disable* | -d)
+    --disable | -d)
       DISABLE_HOOK_STATUS=1
       ;;
-    --help* | -h)
+    --help | -h)
       print_help
       exit 0
       ;;
