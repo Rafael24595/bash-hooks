@@ -601,7 +601,6 @@ update_installer() {
 
     echo -e "\nUpdating installer to ${BOLD}${VERSION}${RESET} version from ${BOLD}'${FILE_URL}'${RESET}..."
 
-    CONTENT=$(curl -sf "$FILE_URL")
     if ! CONTENT=$(curl -sf "$FILE_URL") ; then
         exit_error "Failed to retrieve script from GitHub."
     fi
