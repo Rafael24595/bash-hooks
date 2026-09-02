@@ -1,8 +1,8 @@
 #!/bin/bash
 
-_VERSION="1.1.0"
+_VERSION="1.2.0"
 _PACKAGE="run-linter"
-_DETAILS="Runs shellcheck to find errors in staged Shell files."
+_DETAILS="Runs bash syntax and shellcheck to find errors in staged Shell files."
 
 # Import color codes from colors.sh
 # shellcheck disable=SC1091
@@ -35,9 +35,20 @@ HAS_ERRORS=false
 while IFS= read -r FILE; do
     # Convert to Unix format
     FILE=$(echo "$FILE" | sed 's/\\/\//g')
-    # Check if the file is in the list of staged files
-    if ! OUTPUT=$(shellcheck --color=always "$FILE"); then
-        echo -e "\nFile '${BOLD}$FILE${RESET}' contains errors: \n $OUTPUT"
+
+    # Syntax check with bash -n
+    if ! OUTPUT=$(bash -n "$FILE" 2>&1); then
+        echo -e "\n${RED}✗ Syntax${RESET} errors in '${BOLD}$FILE${RESET}':"
+        # shellcheck disable=SC2001
+        echo "$OUTPUT" | sed 's/^/  /'
+        HAS_ERRORS=true
+    fi
+
+    # Static analysis with ShellCheck
+    if ! OUTPUT=$(shellcheck --color=always "$FILE" 2>&1); then
+        echo -e "\n${RED}✗ ShellCheck${RESET} warnings/errors in '${BOLD}$FILE${RESET}':"
+        # shellcheck disable=SC2001
+        echo "$OUTPUT" | sed 's/^/  /'
         HAS_ERRORS=true
     fi
 done <<< "$STAGED_FILES"
