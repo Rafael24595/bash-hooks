@@ -328,7 +328,7 @@ By default, the script will clean the resources directory of the workspace where
 >    - **run-tests.sh**: Run all Zig tests.
 
 **Shell:**
->    - **run-linter.sh**: Runs **_shellcheck_**  to find errors in staged Shell files.
+>    - **run-linter.sh**: Runs `bash -n` and **_shellcheck_** to find errors in staged Shell files.
 >       - **Dependencies**: 
 >           - **_shellcheck_** -  _0.8.0_ (https://www.shellcheck.net)
 

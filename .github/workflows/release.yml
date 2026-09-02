@@ -22,10 +22,15 @@ jobs:
           fi
           echo "✅ Branch '${GITHUB_REF_NAME}' allowed. Continuing..."
 
+      - name: Install tmq
+        run: |
+          sudo wget https://github.com/azolfagharj/tmq/releases/latest/download/tmq-linux-amd64 -O /usr/bin/tmq
+          sudo chmod +x /usr/bin/tmq
+
       - name: Validate version
         id: version
         run: |
-          VERSION=$(grep '^_VERSION=' bash-hooks | cut -d'=' -f2- | tr -d '"')
+          VERSION=$(tmq '.project.version' project.toml)
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9\.-]+)?$ ]]; then
             echo "❌ Invalid version format: $VERSION"
             echo "✅ Expected format: 1.2.3 or 1.2.3-SNAPSHOT"
