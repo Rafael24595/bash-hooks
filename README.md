@@ -230,20 +230,6 @@ By default, the script will be mounted in the same workspace where the installer
     $ ./bash-hooks --pull=golang/sh/run-govulncheck.sh:0.6.3
     ```
 
-## Cleaner
-
-File name: **_clear-resources_**
-
-By default, the script will clean the resources directory of the workspace where the installer is located.
-
-**Arguments:**
-
-- Workspace: Defines the workspace resources directory that will be cleaned.
-
-    ```bash
-    $ ./clear-resources --workspace=../other_project/my_project
-    ```
-
 ## Packages
 
 **Golang:**
