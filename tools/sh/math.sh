@@ -29,7 +29,7 @@ is_float_less_than() {
 #   is_float_greater_than 5.0 2.0  => returns 0
 #   is_float_greater_than 3.14 4.0 => returns 1
 is_float_greater_than() {
-    awk -v a="$1" -v b="$2" 'BEGIN { exit !(a < b) }'
+    awk -v a="$1" -v b="$2" 'BEGIN { exit !(a > b) }'
 }
 
 # Checks if a floating-point number is greater than or equal to another.
