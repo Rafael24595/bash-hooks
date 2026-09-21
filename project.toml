@@ -2,5 +2,5 @@ version = "1.0"
 
 [project]
 name = "bash-hooks"
-version = "0.18.0"
+version = "0.18.1"
 description = "A Bash script to configure pre-commit hooks from a YAML file and a collection of shell scripts."
