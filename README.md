@@ -309,6 +309,17 @@ Runs Credo to analyze code consistency and identify potential issues.
 
 ### Zig
 
+#### `run-build.sh`
+
+Builds the Zig project and copies the build artifacts to the output directory after a successful build.
+
+**Flags**
+
+| Flag | Description |
+|---|---|
+| `--clean`, `--c` | Cleans up temporary build resources after the build completes. Skips copying the build artifacts to the output directory. |
+| `--output=<path>`, `--o=<path>` | Specifies the output directory for the build artifacts. Defaults to `zig-out`. |
+
 #### `check-zig-context.sh`
 
 Executes checks to validate whether the current project is a valid Zig project.
