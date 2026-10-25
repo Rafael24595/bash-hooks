@@ -1,329 +1,364 @@
-## Configuration file
+# bash-hooks
 
-The configuration file must be named [**_pre-commit-build.yaml_**](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml) by default and placed in the root of the project workspace with the following structure:
+`bash-hooks` manages project hooks and provides reusable scripts for checks, formatting, testing, builds, and other development tasks.
 
-- Root tag "**_hooks_**" (_Required_):
-    - For remote scripts, use a "**_remote_**" tag that contains a list of "**_repos_**" with the following structure:
-        - **id**: The ID of the script.
-        - **origin**: The URL of the GitHub repository.
-        - **tag**: The tag of the repository.
-        - **target**: The path that contains the script.
-        - **name**: The name of the script.
-        - **disabled**: The status of the script.
-        - **expect**: The expected result of the script — `true` for exit code `0`, `false` for exit code `< 1`.
-        - **return**: The actual return value of the script. `true` for `1`, `false` for `0`.
-        - **flags**: The flags passed to the script, defined without the `--` prefix.
-        - **args**: The arguments passed to the script.
-    - For local scripts, use a "**_local_**" tag that contains a list of "**_scripts_**" with the following structure:
-        - **id**: The ID of the script.
-        - **path**: The path that contains the script.
-        - **disabled**: The status of the script.
-        - **expect**: The expected result of the script — `true` for exit code `0`, `false` for exit code `< 1`.
-        - **return**: The actual return value of the script. `true` for `1`, `false` for `0`.
-        - **flags**: The flags passed to the script, defined without the `--` prefix.
-        - **args**: The arguments passed to the script.
+## Table of Contents
 
-**_See the template example:_** [**_pre-commit-build.template.yaml_**](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+- [Global Installation](#global-installation)
+- [CLI Reference](#cli-reference)
+- [Package Reference](#package-reference)
+  - [Golang](#golang)
+  - [Node.js](#nodejs)
+  - [Elixir/Mix](#elixirmix)
+  - [Zig](#zig)
+  - [Shell](#shell)
+  - [Tools](#tools)
+- [Dependencies](#dependencies)
 
-## Global Installer
+## Getting Started
 
-The global installer installs the [**_bash-hooks_**](https://github.com/Rafael24595/bash-hooks) script in the user's local binary directory and adds it to the Bash `PATH`.
+1. Install `bash-hooks` using the [global installer](#global-installation), or use the script directly in your workspace.
+2. Create a `pre-commit-build.yaml` configuration file in the workspace root.
+3. Configure the local and remote scripts to run.
+4. Run `bash-hooks` to generate or update the hook script.
 
-By default, the script is installed in:
+## Configuration
+
+By default, the configuration file must be named `pre-commit-build.yaml` and placed in the workspace root.
+
+Start from the [configuration template](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml).
+
+### Structure
+
+- `hooks` (**required**)
+  - `remote.repos`: list of remote script repositories.
+  - `local.scripts`: list of local scripts.
+
+### Common script fields
+
+These fields are used by remote and local script entries:
+
+| Field | Description |
+| --- | --- |
+| `id` | Script identifier. |
+| `disabled` | Whether the script is disabled. |
+| `expect` | Expected execution result: `true` for exit code `0`, `false` for a non-zero exit code. |
+| `return` | Configured return behavior: `true` for `1`, `false` for `0`. |
+| `flags` | Flags passed to the script, specified without the `--` prefix. |
+| `args` | Arguments passed to the script. |
+
+### Remote script fields
+
+| Field | Description |
+| --- | --- |
+| `origin` | URL of the Git repository. |
+| `tag` | Repository tag to use. |
+| `target` | Path containing the script. |
+| `name` | Script name. |
+
+### Local script fields
+
+| Field | Description |
+| --- | --- |
+| `path` | Path to the local script. |
+
+See the [configuration template](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml) for a complete example.
+
+## Global Installation
+
+The global installer (`install.sh`) installs `bash-hooks` in the user's local binary directory and adds its directory to `PATH`.
+
+Default installation path:
 
 ```text
 ~/.local/bin/bash-hooks/bash-hooks
 ```
 
-The installer also configures the following directory in **_~/.bashrc_**:
+The installer configures the following directory in `~/.bashrc`:
 
 ```text
 ~/.local/bin/bash-hooks
 ```
 
-After installation, the **_bash-hooks_** command can be executed from any workspace.
-
-**Arguments:**
-
-- **Help**: Displays the available installer commands.
-
-    ```bash
-    $ ./install.sh -h
-    ```
-    ```bash
-    $ ./install.sh --help
-    ```
-
-- **Version**: Shows the current global installer version.
-
-    ```bash
-    $ ./install.sh -v
-    ```
-    ```bash
-    $ ./install.sh --version
-    ```
-
-- **Install**: Installs the local **_bash-hooks_** script.
-
-    ```bash
-    $ ./install.sh -i
-    ```
-    ```bash
-    $ ./install.sh --install
-    ```
-
-    If no argument is specified, the installer performs the installation by default.
-
-    ```bash
-    $ ./install.sh
-    ```
-
-- **Remote**: Downloads the **_bash-hooks_** script from GitHub and installs it globally.
-
-    > **Compatibility:** The `--remote` option can only install **_bash-hooks_** from version **_0.16.0_** onwards. Before version **_0.16.0_**, the script was named **_install-pre-commit_**, so remote installation of those versions is not supported by this installer.
-
-    ```bash
-    $ ./install.sh -r
-    ```
-    ```bash
-    $ ./install.sh --remote
-    ```
-
-    By default, the latest version available in the main branch is downloaded.
-    A specific version can be installed by specifying its tag:
-
-    ```bash
-    $ ./install.sh -r=0.16.0
-    ```
-    ```bash
-    $ ./install.sh --remote=0.16.0
-    ```
-
-- **Uninstall**: Removes the globally installed **_bash-hooks_** script and its corresponding `PATH` configuration from **_~/.bashrc_**.
-
-    ```bash
-    $ ./install.sh -u
-    ```
-    ```bash
-    $ ./install.sh --uninstall
-    ```
-
-    By default, the latest version available in the main branch is downloaded.
-    A specific version can be installed by specifying its tag:
-
-    ```bash
-    $ ./install.sh -r=0.16.0
-    ```
-    ```bash
-    $ ./install.sh --remote=0.16.0
-    ```
-
-After installation, reload the Bash configuration to make the command available in the current terminal:
+After installation, the `bash-hooks` command can be run from any workspace. Reload the shell configuration or open a new terminal:
 
 ```bash
-$ source ~/.bashrc
+source ~/.bashrc
 ```
 
-Alternatively, open a new terminal.
+### Installer commands
 
-Once installed, bash-hooks can be executed directly from any workspace:
+| Option | Description |
+| --- | --- |
+| `-h`, `--help` | Displays installer help. |
+| `-v`, `--version` | Shows the installer version. |
+| `-i`, `--install` | Installs `bash-hooks`. Installation is the default action when no argument is supplied. |
+| `-r[=<tag>]`, `--remote[=<tag>]` | Downloads and installs `bash-hooks` from GitHub to the specified tag, or to the latest version if no tag is provided. |
+| `-u`, `--uninstall` | Removes the global installation and its `PATH` configuration from `~/.bashrc`. |
+
+The `--remote` option supports `bash-hooks` versions `0.16.0` and later. Earlier versions used the name `install-pre-commit` and are not supported by this remote installer.
+
+Without a tag, remote installation downloads the latest version available from the main branch.
+
+## CLI Reference
+
+By default, the `bash-hooks`script is located in the same workspace as the installer, but it can also be installed globally.
+
+### Commands and options
+
+| Option | Description |
+| --- | --- |
+| `-h`, `--help` | Displays help. |
+| `-u`, `--update[=<tag>]` | Updates the script to the specified tag, or to the latest version if no tag is provided. |
+| `-v`, `--version` | Displays the current version. |
+| `-t` | Runs the script in test mode, placing it in the remote-scripts directory so Git will not use it as a hook. |
+| `-e`, `--enable[=<id>[,<id>...]]` | Enables the hook, or enables only the specified script IDs. |
+| `-d`, `--disable[=<id>[,<id>...]]` | Disables the hook, or disables only the specified script IDs. |
+| `--workspace=<path>` | Sets the workspace where the script will be placed. |
+| `--input=<path>` | Sets the input configuration file path. |
+| `--output=<path>` | Sets the generated script path. |
+| `-b`, `--block` | Generates a single-file script without imports. |
+| `--mode=<mode>` | Sets the build mode. Supported values: `pre_commit` and `pre_push`. |
+| `--pull=<script>:<tag>` | Downloads a remote script at the specified version. |
+
+Examples:
 
 ```bash
-$ bash-hooks
+# Enable selected scripts
+./bash-hooks --enable=check-staged,run-linter
+
+# Disable a selected script
+./bash-hooks --disable=run-linter
+
+# Select a workspace and configuration file
+./bash-hooks --workspace=../other_project/my_project
+./bash-hooks --input=.test.yaml
+./bash-hooks --output=.test.sh
+
+# Generate a single-file script
+./bash-hooks --block
+
+# Select the hook mode
+./bash-hooks --mode=pre_commit
+
+# Download a specific remote script version
+./bash-hooks --pull=golang/sh/run-govulncheck.sh:0.6.3
 ```
 
-## Installer
+## Package Reference
 
-File name: **_bash-hooks_**
+### Golang
 
-By default, the script will be mounted in the same workspace where the installer is located.
+#### `check-go-context.sh`
 
-**Arguments:**
+Executes checks to validate whether the current project is a valid Go project.
 
-- **Help**: Help command.
+**Flags**
 
-    ```bash
-    $ ./bash-hooks -h
-    ```
-    ```bash
-    $ ./bash-hooks --help
-    ```
+| Flag | Description |
+|---|---|
+| `--project`, `--p` | Verifies if this is a Go project. |
+| `--staged`, `--s` | Checks for staged Go files. |
+| `--install`, `--i` | Verifies if Go is installed. |
 
-- **Update**: Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version.
+If no flags are selected, all checks are executed.
 
-    ```bash
-    $ ./bash-hooks -u
-    ```
-    ```bash
-    $ ./bash-hooks --update=tag
-    ```
+#### `run-fieldalignment.sh`
 
-- **Version**: Shows actual installer version.
+Runs the `fieldalignment` tool to analyze Go struct memory layout and detect potential memory savings.
 
-    ```bash
-    $ ./bash-hooks -v
-    ```
-    ```bash
-    $ ./bash-hooks --version
-    ```
+**Flags**
 
-- **Test**: The script will be mounted inside the remote-scripts directory to prevent it from being used by Git.
+| Flag | Description |
+|---|---|
+| `--percent`, `--p` | Defines the minimum percentage of memory savings required for the check to fail. Default: `25%`. |
 
-    ```bash
-    $ ./bash-hooks -t
-    ```
+#### `run-formatter.sh`
 
-- **Enable**: Disables the hook if exists otherwise creates it disabled. You can also specify one or more hook IDs to enable only those scripts. 
+Formats all Go files.
 
-    ```bash
-    $ ./bash-hooks --enable
-    $ ./bash-hooks -e
-    $ ./bash-hooks -e=check-staged 
-    $ ./bash-hooks --enable=check-staged,run-linter
-    ```
+#### `run-linter.sh`
 
-- **disable**: Enables the hook if exists otherwise creates it enabled. You can also specify one or more hook IDs to disable only those scripts.
+Runs `golangci-lint` to identify errors in staged Go files.
 
-    ```bash
-    $ ./bash-hooks --disable
-    $ ./bash-hooks -d
-    $ ./bash-hooks -d=check-staged 
-    $ ./bash-hooks --disable=check-staged,run-linter
-    ```
+**Flags**
 
-- **Workspace**: Defines the workspace where the script will be placed.
+| Flag | Description |
+|---|---|
+| `--install`, `--i` | Installs the latest version of `golangci-lint` if it is not already installed. |
+| `--strict`, `--s` | Enables strict mode. If any file contains errors, regardless of whether it is staged, the execution is marked as failed. |
+| `--enable=<lnt>`, `--e=<lnt>` | Enables a specific linter. Can be specified multiple times. Linters are combined into a comma-separated list. |
 
-    ```bash
-    $ ./bash-hooks --workspace=../other_project/my_project
-    ```
-    
-- **Input**: Defines the directory and name where the input file is located.
+**Dependencies**
 
-    ```bash
-    $ ./bash-hooks --input=.test.yaml
-    ```
+- `golangci-lint` — `1.62.0` ([GitHub](https://github.com/golangci/golangci-lint))
 
-- **Output**: Defines directory and name where the script will be placed.
+#### `run-tests.sh`
 
-    ```bash
-    $ ./bash-hooks --output=.test.sh
-    ```
+Runs all Go tests.
 
-- **Block**: Generates the script as a single file without imports.
+**Flags**
 
-    ```bash
-    $ ./bash-hooks -b
-    ```
-    ```bash
-    $ ./bash-hooks --block
-    ```
+| Flag | Description |
+|---|---|
+| `--tags=<tag>`, `--t=<tag>` | Defines the test build tags. Can be specified multiple times. Tags are combined into a comma-separated list. |
+| `--race`, `--r` | Runs tests using the race detector. |
+| `--cover=<threshold>`, `--c=<threshold>` | Runs tests with coverage analysis. If a threshold is specified, the check fails when coverage falls below that value. The threshold can be expressed as a percentage (e.g., `80.0`) or as an absolute number of statements (e.g., `100`). |
 
-- **Mode**: Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push.
+#### `run-govulncheck.sh`
 
-    ```bash
-    $ ./bash-hooks --mode=pre_commit
-    ```
+Runs `govulncheck` to check dependencies for known vulnerabilities.
 
-- **Pull**: Downloads the specified remote script at the given version.
+**Flags**
 
-    ```bash
-    $ ./bash-hooks --pull=golang/sh/run-govulncheck.sh:0.6.3
-    ```
+| Flag | Description |
+|---|---|
+| `--install` | Installs the latest version of `govulncheck` if it is not already installed. |
 
-## Packages
+**Dependencies**
 
-**Golang:**
->    - **check-go-context.sh**: Executes functions to validate whether the current project is a valid Go project.
->       - **Flags**: 
->           - **If none are selected, all checks will be executed**
->           - **--project** | **--p**: Verifies if this is a Go project
->           - **--staged** | **--s**: Checks for staged Go files
->           - **--install** | **--i**: Verifies if Go is installed
->    - **run-fieldalignment.sh**: Runs the `fieldalignment` tool to analyze Go struct memory layout and detect potential memory savings.  
->       - **Flags**: 
->           - **--percent** | **--p**: Defines the minimum percentage of memory savings required to fail the check. **Default:** `25%`
->    - **run-formatter.sh**: Format all Go files.
->    - **run-linter.sh**: Runs `golangci-lint`  to find errors in staged Go files.
->       - **Flags**: 
->           - **--install** | **--i**: Installs the latest version of golangci-lint if it is not already.
->            - **--strict** | **--i**: Enable strict mode. If any file, regardless of whether it is in the staging area, contains errors, the execution will be marked as failed.
->           - **--enable=`<lnt>`** | **--e=`<lnt>`**: Enables the specific linter. Can be specified multiple times. Linters are combined as a comma-separated list.
->       - **Dependencies**: 
->           - **_golangci-lint_** -  _1.62.0_ (https://github.com/golangci/golangci-lint)
->    - **run-tests.sh**: Runs all Go tests.
->       - **Flags**: 
->           - **--tags=`<tag>`** | **--t=`<tag>`**: Defines the test build tags. Can be specified multiple times. Tags are combined as a comma-separated list.
->           - **--race** | **--r**: Runs the tests using the race detector.
->           - **--cover=`<threshold>`** | **--c=`<threshold>`**: Runs the tests with coverage analysis. If a threshold is specified, the test will fail if the coverage is below that value. The threshold can be defined as a percentage (e.g., `80.0`) or as an absolute number of statements (e.g., `100`).
->    - **run-govulncheck.sh**: Executes `govulncheck` to check for vulnerabilities in dependencies.
->       - **Flags**: 
->           - **--install**: Installs the latest version of govulncheck if it is not already installed
->       - **Dependencies**: 
->           - **_govulncheck_** -  _v1.1.4_ (https://github.com/golang/vuln)
->    - **run-coverage-black-box.sh**: Runs black-box tests on Go packages and calculates code coverage. By default, it checks whether the test directory structure matches the source structure and verifies if the current test coverage meets or exceeds the specified minimum.
->       - **Flags**: 
->           - **--verbose** | **--v** : Displays the coverage details.
->           - **--success-empty** | **--se** : Treats the absence of tests as a successful result.
->           - **--invalid-empty** | **--ie** : Treats packages with no found tests as a valid result.
->           - **--package=`<pkg>`** | **--p=`<pkg>`** : Manually specify one or more packages to analyze. Can be repeated to include multiple packages.
->       - **Arguments**: 
->           - _Minimum coverage percentage. Example: **80.0**_ 
+- `govulncheck` — `v1.1.4` ([GitHub](https://github.com/golang/vuln))
 
-**Node:**
->    - **run-npm-run.sh**: Executes an npm script command based on a configurable argument.
->       - **Arguments**: 
->           - _Script command. Example: **build**, **dev**, **test**..._
->       - **Dependencies**: 
->           - **_node_** - Tested with Node.js v18+, but should work with all versions (https://nodejs.org/en)
->    - **run-eslint.sh**: Executes `ESLint` analysis tool to analyze code consistency and identify errors.
->       - **Flags**: 
->           - **--force-all** | **--fa**: Runs `ESLint` for all configured project files. If not specified only staged files will be analyzed
->       - **Dependencies**: 
->           - **_node_** - Tested with Node.js v18+, but should work with all versions (https://nodejs.org/en)
->           - **_eslint_** - _9.34.0_ (https://www.npmjs.com/package/eslint)
->           - **_eslint-formatter-unix_** - _8.40.0_ (https://www.npmjs.com/package/eslint-formatter-unix)
+#### `run-coverage-black-box.sh`
 
-**Elixir/Mix:**
->    - **check-mix-context.sh**: Executes functions to validate whether the current project is a valid Mix project.
->       - **Flags**: 
->           - **If none are selected, all checks will be executed**
->           - **--project** | **--p**: Verifies if this is a Mix project
->           - **--staged** | **--s**: Checks for staged Elixir files (`*.ex` / `*.exs`)
->           - **--install** | **--i**: Verifies if Elixir and Mix are installed
->    - **run-mix-tests.sh**: Executes all Mix tests.
->       - **Dependencies**: 
->           - **_Mix_** - _^1.12.0_ (https://hexdocs.pm/mix/Mix.Tasks.Test.html)
->    - **run-credo.sh**: Executes Credo analysis tool to analyze code consistency and identify errors.
->       - **Flags**: 
->           - **--static** | **--s**: Includes all issues. Without it, only positive-priority issues (↑ ↗ →) will be reported
->           - **--force-all** | **--fa**: Runs Credo for all project files. If not specified only staged files will be analyzed
->       - **Dependencies**: 
->           - **_Credo_** - _v1.7.12_ (https://hexdocs.pm/credo/overview.html)
+Runs black-box tests on Go packages and calculates code coverage. By default, it checks whether the test directory structure matches the source structure and verifies that coverage meets or exceeds the specified minimum.
 
-**Zig:**
->    - **check-zig-context.sh**: Executes functions to validate whether the current project is a valid Zig project.
->       - **Flags**: 
->           - **If none are selected, all checks will be executed**
->           - **--project** | **--p**: Verifies if this is a Zig project
->           - **--staged** | **--s**: Checks for staged Elixir files (`*.zig` / `*.zon`)
->           - **--install** | **--i**: Verifies if Zig is installed
->    - **run-check.sh**: Run Zig's ast-check on staged Zig files to detect errors.
->    - **run-fmt.sh**: Run Zig's fmt to check staged files for formatting issues and optionally fix them.
->       - **Flags**: 
->           - **--apply** | **--a**: Fix the issues and add the corrected files back to the Git staging area.
->    - **run-tests.sh**: Run all Zig tests.
+**Flags**
 
-**Shell:**
->    - **run-linter.sh**: Runs `bash -n` and **_shellcheck_** to find errors in staged Shell files.
->       - **Dependencies**: 
->           - **_shellcheck_** -  _0.8.0_ (https://www.shellcheck.net)
+| Flag | Description |
+|---|---|
+| `--verbose`, `--v` | Displays coverage details. |
+| `--success-empty`, `--se` | Treats the absence of tests as a successful result. |
+| `--invalid-empty`, `--ie` | Treats packages with no discovered tests as valid. |
+| `--package=<pkg>`, `--p=<pkg>` | Manually specifies one or more packages to analyze. Can be repeated to include multiple packages. |
 
-**Tools:**
->    - **check-large-files.sh**: Searches for large files based on a configurable number of bytes.
->       - **Arguments**: 
->           - _File size in bytes. Example: **5242880**_ 
+**Arguments**
+
+- Minimum coverage percentage (e.g., `80.0`).
+
+### Node.js
+
+#### `run-npm-run.sh`
+
+Executes an npm script based on a configurable argument.
+
+**Arguments**
+
+- Script name (e.g., `build`, `dev`, `test`).
+
+**Dependencies**
+
+- `node` — Tested with Node.js v18+, but should work with other versions ([Official website](https://nodejs.org/en)).
+
+#### `run-eslint.sh`
+
+Runs ESLint to analyze code consistency and identify errors.
+
+**Flags**
+
+| Flag | Description |
+|---|---|
+| `--force-all`, `--fa` | Runs ESLint on all configured project files. If omitted, only staged files are analyzed. |
+
+**Dependencies**
+
+- `node` — Tested with Node.js v18+, but should work with other versions ([Official website](https://nodejs.org/en)).
+- `eslint` — `9.34.0` ([npm](https://www.npmjs.com/package/eslint)).
+- `eslint-formatter-unix` — `8.40.0` ([npm](https://www.npmjs.com/package/eslint-formatter-unix)).
+
+### Elixir/Mix
+
+#### `check-mix-context.sh`
+
+Executes checks to validate whether the current project is a valid Mix project.
+
+**Flags**
+
+| Flag | Description |
+|---|---|
+| `--project`, `--p` | Verifies if this is a Mix project. |
+| `--staged`, `--s` | Checks for staged Elixir files (`*.ex` / `*.exs`). |
+| `--install`, `--i` | Verifies if Elixir and Mix are installed. |
+
+If no flags are selected, all checks are executed.
+
+#### `run-mix-tests.sh`
+
+Runs all Mix tests.
+
+**Dependencies**
+
+- `Mix` — `^1.12.0` ([Mix.Task.Test documentation](https://hexdocs.pm/mix/Mix.Tasks.Test.html)).
+
+#### `run-credo.sh`
+
+Runs Credo to analyze code consistency and identify potential issues.
+
+**Flags**
+
+| Flag | Description |
+|---|---|
+| `--static`, `--s` | Includes all issues in the report. If omitted, only positive-priority issues (↑ ↗ →) are reported. |
+| `--force-all`, `--fa` | Runs Credo on all project files. If omitted, only staged files are analyzed. |
+
+**Dependencies**
+
+- `Credo` — `v1.7.12` ([Documentation](https://hexdocs.pm/credo/overview.html)).
+
+### Zig
+
+#### `check-zig-context.sh`
+
+Executes checks to validate whether the current project is a valid Zig project.
+
+**Flags**
+
+| Flag | Description |
+|---|---|
+| `--project`, `--p` | Verifies if this is a Zig project. |
+| `--staged`, `--s` | Checks for staged Zig files (`*.zig` / `*.zon`). |
+| `--install`, `--i` | Verifies if Zig is installed. |
+
+If no flags are selected, all checks are executed.
+
+#### `run-check.sh`
+
+Runs Zig's `ast-check` on staged Zig files to detect errors.
+
+#### `run-fmt.sh`
+
+Runs Zig's formatter to check staged files for formatting issues and optionally fix them.
+
+**Flags**
+
+| Flag | Description |
+|---|---|
+| `--apply`, `--a` | Fixes formatting issues and adds the corrected files back to the Git staging area. |
+
+#### `run-tests.sh`
+
+Runs all Zig tests.
+
+### Shell
+
+#### `run-linter.sh`
+
+Runs `bash -n` and `shellcheck` to identify syntax and other potential issues in staged Shell files.
+
+**Dependencies**
+
+- `shellcheck` — `0.8.0` ([Official website](https://www.shellcheck.net)).
+
+### Tools
+
+#### `check-large-files.sh`
+
+Searches for large files based on a configurable file-size threshold, specified in bytes.
 
 ## Dependencies
 
-- **yq** -  _v4.44.2_ (https://github.com/mikefarah/yq)
-    - **Notes**: **_snap_** installations of **_yq_** could not working as expected. See: [snap-notes](https://github.com/mikefarah/yq/#snap-notes)
+| Dependency | Version / notes |
+| --- | --- |
+| `yq` | `v4.44.2`. See the [yq repository](https://github.com/mikefarah/yq). Snap installations may not work as expected; see the [snap notes](https://github.com/mikefarah/yq/#snap-notes). |
