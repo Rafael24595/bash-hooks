@@ -764,13 +764,13 @@ if [ "$IS_TEST" = true ]; then
 fi
 
 {
-    echo "#!/bin/sh"
+    echo "#!/bin/bash"
     echo -e "\n# Color codes"
     echo -e "BOLD=\"\\\033[1m\""
     echo -e "YELLOW=\"\\\033[0;33m\""
     echo -e "RESET=\"\\\033[0m\""
     echo -e "\nDISABLED_HOOK=$DISABLE_HOOK"
-    echo -e "if [ \$DISABLED_HOOK == true ]; then"
+    echo -e "if [ \"\${DISABLED_HOOK}\" == true ]; then"
     echo -e "   echo -e \"\${YELLOW}\${BOLD}Warning, the hook disabled.\"\${RESET}"
     echo -e "   exit 0"
     echo -e "fi"
