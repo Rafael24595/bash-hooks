@@ -23,6 +23,10 @@ for FLAG in "$@"; do
         --enable=* | --e=*)
             ENABLE+=("${FLAG#*=}")
             ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
+            exit 1
+            ;;
     esac
 done
 

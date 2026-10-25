@@ -128,6 +128,10 @@ for ARG in "$@"; do
         "pre_push")
           HOOK_MODE="pre-push"
           ;;
+        *)
+          echo -e "${RED}\nError: unknown option: $ARG${RESET}"
+          exit 1
+          ;;
       esac
       OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
       ;;
@@ -182,6 +186,10 @@ for ARG in "$@"; do
     --help | -h)
       print_help
       exit 0
+      ;;
+    *)
+      echo -e "${RED}\nError: unknown option: $ARG${RESET}"
+      exit 1
       ;;
   esac
 done

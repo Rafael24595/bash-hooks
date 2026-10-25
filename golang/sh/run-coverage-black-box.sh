@@ -37,6 +37,10 @@ for FLAG in "$@"; do
         --p=*)
             PACKAGE_LIST+=("${FLAG#*=}")
             ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
+            exit 1
+            ;;
     esac
 done
 

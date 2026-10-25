@@ -33,6 +33,10 @@ ensure_ecmascript_staged() {
             --ts)
               TYPES+=("*.ts" "*.mts" "*.cts" "*.tsx")
               ;;
+            *)
+              echo -e "${RED}\nError: unknown option: $1${RESET}"
+              exit 1
+              ;;
         esac
         shift
     done

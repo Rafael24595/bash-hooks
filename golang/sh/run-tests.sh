@@ -32,6 +32,10 @@ for FLAG in "$@"; do
             COVERAGE_ENABLED=true
             COVERAGE_THRESHOLD="${FLAG#*=}"
             ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
+            exit 1
+            ;;
     esac
 done
 
