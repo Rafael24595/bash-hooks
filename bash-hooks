@@ -19,7 +19,7 @@ RESET="\033[0m"
 INSTALLER_NAME="$(basename "$0")"
 
 DEFAULT_HOOK_MODE="pre-commit"
-DEFAULT_INPUT_FILE="pre-commit-build.yaml"
+DEFAULT_INPUT_FILE="pre-commit-build.y*ml"
 DEFAULT_OUTPUT_FILE=".git/hooks/${DEFAULT_HOOK_MODE}"
 
 REMOTE_LOCATION=".remote-scripts"
@@ -195,6 +195,18 @@ for ARG in "$@"; do
 done
 
 INPUT_FILE="${WORKSPACE}/${INPUT_FILE}"
+if [[ "$INPUT_FILE" == *'*'* ]]; then
+    mapfile -t MATCHES < <(compgen -G "$INPUT_FILE")
+
+    if (( ${#MATCHES[@]} == 0 )); then
+        exit_error "No input file found matching '$INPUT_FILE'."
+    elif (( ${#MATCHES[@]} > 1 )); then
+        exit_error "Multiple input files found matching '$INPUT_FILE'."
+    fi
+
+    INPUT_FILE="${MATCHES[0]}"
+fi
+
 OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
 
 # --------- #

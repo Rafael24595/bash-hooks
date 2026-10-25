@@ -20,15 +20,15 @@
 ## Getting Started
 
 1. Install `bash-hooks` using the [global installer](#global-installation), or use the script directly in your workspace.
-2. Create a `pre-commit-build.yaml` configuration file in the workspace root.
+2. Create a `pre-commit-build.yaml` or `pre-commit-build.yml` configuration file in the workspace root.
 3. Configure the local and remote scripts to run.
 4. Run `bash-hooks` to generate or update the hook script.
 
 ## Configuration
 
-By default, the configuration file must be named `pre-commit-build.yaml` and placed in the workspace root.
+By default, the configuration file is named `pre-commit-build.yaml` or `pre-commit-build.yml` and must be placed in the workspace root. If both files exist, an error is raised. Use `--input=<path>` to specify a different configuration file.
 
-Start from the [configuration template](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml).
+Start from the [configuration template](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yml).
 
 ### Structure
 
@@ -64,7 +64,7 @@ These fields are used by remote and local script entries:
 | --- | --- |
 | `path` | Path to the local script. |
 
-See the [configuration template](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yaml) for a complete example.
+See the [configuration template](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yml) for a complete example.
 
 ## Global Installation
 
@@ -134,7 +134,7 @@ Examples:
 
 # Select a workspace and configuration file
 ./bash-hooks --workspace=../other_project/my_project
-./bash-hooks --input=.test.yaml
+./bash-hooks --input=.test.yml
 ./bash-hooks --output=.test.sh
 
 # Generate a single-file script
