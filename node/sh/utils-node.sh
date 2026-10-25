@@ -28,11 +28,15 @@ ensure_ecmascript_staged() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --js)
-            TYPES+=("*.js" "*.mjs" "*.cjs" "*.jsx")
-            ;;
+              TYPES+=("*.js" "*.mjs" "*.cjs" "*.jsx")
+              ;;
             --ts)
-            TYPES+=("*.ts" "*.mts" "*.cts" "*.tsx")
-            ;;
+              TYPES+=("*.ts" "*.mts" "*.cts" "*.tsx")
+              ;;
+            *)
+              echo -e "${RED}\nError: unknown option: $1${RESET}"
+              exit 1
+              ;;
         esac
         shift
     done

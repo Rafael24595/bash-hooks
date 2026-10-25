@@ -15,6 +15,10 @@ for FLAG in "$@"; do
         --percent=* | --p=*)
             PERCENT="${FLAG#*=}"
             ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
+            exit 1
+            ;;
     esac
 done
 

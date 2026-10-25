@@ -19,7 +19,7 @@ RESET="\033[0m"
 INSTALLER_NAME="$(basename "$0")"
 
 DEFAULT_HOOK_MODE="pre-commit"
-DEFAULT_INPUT_FILE="pre-commit-build.yaml"
+DEFAULT_INPUT_FILE="pre-commit-build.y*ml"
 DEFAULT_OUTPUT_FILE=".git/hooks/${DEFAULT_HOOK_MODE}"
 
 REMOTE_LOCATION=".remote-scripts"
@@ -128,6 +128,10 @@ for ARG in "$@"; do
         "pre_push")
           HOOK_MODE="pre-push"
           ;;
+        *)
+          echo -e "${RED}\nError: unknown option: $ARG${RESET}"
+          exit 1
+          ;;
       esac
       OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
       ;;
@@ -167,26 +171,42 @@ for ARG in "$@"; do
       DISABLE_HOOK_STATUS=0
       ;;
     --enable=* | -e=*)
-        DISABLE_HOOK_STATUS=0
-        IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
-        HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
-        ;;
+      DISABLE_HOOK_STATUS=0
+      IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
+      HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
+      ;;
     --disable | -d)
       DISABLE_HOOK_STATUS=1
       ;;
     --disable=* | -d=*)
-        DISABLE_HOOK_STATUS=1
-        IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
-        HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
-        ;;
+      DISABLE_HOOK_STATUS=1
+      IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
+      HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
+      ;;
     --help | -h)
       print_help
       exit 0
+      ;;
+    *)
+      echo -e "${RED}\nError: unknown option: $ARG${RESET}"
+      exit 1
       ;;
   esac
 done
 
 INPUT_FILE="${WORKSPACE}/${INPUT_FILE}"
+if [[ "$INPUT_FILE" == *'*'* ]]; then
+    mapfile -t MATCHES < <(compgen -G "$INPUT_FILE")
+
+    if (( ${#MATCHES[@]} == 0 )); then
+        exit_error "No input file found matching '$INPUT_FILE'."
+    elif (( ${#MATCHES[@]} > 1 )); then
+        exit_error "Multiple input files found matching '$INPUT_FILE'."
+    fi
+
+    INPUT_FILE="${MATCHES[0]}"
+fi
+
 OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
 
 # --------- #
@@ -764,13 +784,13 @@ if [ "$IS_TEST" = true ]; then
 fi
 
 {
-    echo "#!/bin/sh"
+    echo "#!/bin/bash"
     echo -e "\n# Color codes"
     echo -e "BOLD=\"\\\033[1m\""
     echo -e "YELLOW=\"\\\033[0;33m\""
     echo -e "RESET=\"\\\033[0m\""
     echo -e "\nDISABLED_HOOK=$DISABLE_HOOK"
-    echo -e "if [ \$DISABLED_HOOK == true ]; then"
+    echo -e "if [ \"\${DISABLED_HOOK}\" == true ]; then"
     echo -e "   echo -e \"\${YELLOW}\${BOLD}Warning, the hook disabled.\"\${RESET}"
     echo -e "   exit 0"
     echo -e "fi"
