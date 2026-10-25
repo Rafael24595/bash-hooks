@@ -167,18 +167,18 @@ for ARG in "$@"; do
       DISABLE_HOOK_STATUS=0
       ;;
     --enable=* | -e=*)
-        DISABLE_HOOK_STATUS=0
-        IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
-        HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
-        ;;
+      DISABLE_HOOK_STATUS=0
+      IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
+      HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
+      ;;
     --disable | -d)
       DISABLE_HOOK_STATUS=1
       ;;
     --disable=* | -d=*)
-        DISABLE_HOOK_STATUS=1
-        IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
-        HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
-        ;;
+      DISABLE_HOOK_STATUS=1
+      IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
+      HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
+      ;;
     --help | -h)
       print_help
       exit 0
