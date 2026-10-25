@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.3.0"
+_VERSION="1.3.1"
 _PACKAGE="run-linter"
 _DETAILS="Runs golangci-lint to find errors in staged Go files."
 

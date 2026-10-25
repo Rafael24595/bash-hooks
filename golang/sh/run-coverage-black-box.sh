@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 _PACKAGE="run-coverage-black-box"
 _DETAILS="Runs black-box tests on Go packages and calculates code coverage. By default, it checks whether the test directory structure matches the source structure and verifies if the current test coverage meets or exceeds the specified minimum."
 

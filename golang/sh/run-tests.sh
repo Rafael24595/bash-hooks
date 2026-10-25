@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.6.0"
+_VERSION="1.6.1"
 _PACKAGE="run-tests"
 _DETAILS="Run all Go tests."
 

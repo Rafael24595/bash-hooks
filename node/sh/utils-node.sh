@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 _PACKAGE="utils-node"
 _DETAILS="Contains some utils to manage Node contexts."
 
