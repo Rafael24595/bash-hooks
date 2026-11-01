@@ -7,5 +7,5 @@ hooks:
         path: ./tools/sh/check-staged.sh
       - id: run-linter
         path: ./sh/sh/run-linter.sh
-      - id: sync_temp-tags
-        path: ./sources/sync_temp-tags.sh
+      - id: sync-temp-tags
+        path: ./sources/sync-temp-tags.sh

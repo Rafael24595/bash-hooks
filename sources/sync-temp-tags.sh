@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 _VERSION="1.0.0"
-_PACKAGE="sync_temp-tags"
+_PACKAGE="sync-temp-tags"
 _DETAILS="Sync tags in pre-commit-build.template.yml with the version in project.toml."
 
 # Import color codes from colors.sh
