@@ -130,7 +130,7 @@ for ARG in "$@"; do
           ;;
         *)
           echo -e "${RED}\nError: unknown option: $ARG${RESET}"
-          exit 1
+          exit 2
           ;;
       esac
       OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
@@ -189,7 +189,7 @@ for ARG in "$@"; do
       ;;
     *)
       echo -e "${RED}\nError: unknown option: $ARG${RESET}"
-      exit 1
+      exit 2
       ;;
   esac
 done
@@ -358,7 +358,11 @@ log_script_execution() {
         echo -e "if [ \"\${$HOOK_NAME}\" == true ]; then"
         echo -e "  printf \"\${BOLD}\\\\nExecuting '${SCRIPT}' script...\${RESET}\\\\n\""
         echo -e "  $SCRIPT$ARGS$LOG_FLAGS"
-        echo -e "  if [ \$? -${LOG_DIRECTION} 0 ]; then"
+        echo -e "  EXIT_CODE=\$?"
+        echo -e "  if [ \$EXIT_CODE -eq 2 ]; then"
+        echo -e "      exit 1"
+        echo -e "  fi"
+        echo -e "  if [ \$EXIT_CODE -${LOG_DIRECTION} 0 ]; then"
         echo -e "      exit ${LOG_RETURN}"
         echo -e "  fi"
         echo -e "  printf \"\${BOLD}\\\\n <-----------------> \\\\n\${RESET}\""

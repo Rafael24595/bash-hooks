@@ -35,7 +35,7 @@ ensure_ecmascript_staged() {
               ;;
             *)
               echo -e "${RED}\nError: unknown option: $1${RESET}"
-              exit 1
+              exit 2
               ;;
         esac
         shift

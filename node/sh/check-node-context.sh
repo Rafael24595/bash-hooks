@@ -37,7 +37,7 @@ for FLAG in "$@"; do
             ;;
         *)
             echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
-            exit 1
+            exit 2
             ;;
     esac
 done

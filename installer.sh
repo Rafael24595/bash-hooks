@@ -273,6 +273,6 @@ case "${1:-}" in
         ;;
     *)
         echo -e "\n${RED}Error: unknown option '$1'.${RESET}" >&2
-        exit 1
+        exit 2
         ;;
 esac
