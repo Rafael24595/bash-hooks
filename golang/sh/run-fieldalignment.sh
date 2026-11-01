@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 _PACKAGE="run-fieldalignment"
 _DETAILS="Run fieldalignment analysis tool."
 
@@ -17,7 +17,7 @@ for FLAG in "$@"; do
             ;;
         *)
             echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
-            exit 1
+            exit 2
             ;;
     esac
 done

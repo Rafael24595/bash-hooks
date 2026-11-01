@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 _PACKAGE="utils-node"
 _DETAILS="Contains some utils to manage Node contexts."
 
@@ -35,7 +35,7 @@ ensure_ecmascript_staged() {
               ;;
             *)
               echo -e "${RED}\nError: unknown option: $1${RESET}"
-              exit 1
+              exit 2
               ;;
         esac
         shift

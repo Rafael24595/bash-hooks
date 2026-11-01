@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.3.0"
+_VERSION="1.3.1"
 _PACKAGE="run-linter"
 _DETAILS="Runs golangci-lint to find errors in staged Go files."
 
@@ -25,7 +25,7 @@ for FLAG in "$@"; do
             ;;
         *)
             echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
-            exit 1
+            exit 2
             ;;
     esac
 done

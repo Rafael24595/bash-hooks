@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 _PACKAGE="run-coverage-black-box"
 _DETAILS="Runs black-box tests on Go packages and calculates code coverage. By default, it checks whether the test directory structure matches the source structure and verifies if the current test coverage meets or exceeds the specified minimum."
 
@@ -19,7 +19,6 @@ SUCCESS_EMPTY=false
 INVALID_EMPTY=false
 PACKAGE_LIST=()
 
-# Parse flags
 for FLAG in "$@"; do
     case "$FLAG" in
         --verbose | -v)
@@ -39,7 +38,7 @@ for FLAG in "$@"; do
             ;;
         *)
             echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
-            exit 1
+            exit 2
             ;;
     esac
 done

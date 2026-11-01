@@ -66,6 +66,18 @@ These fields are used by remote and local script entries:
 
 See the [configuration template](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yml) for a complete example.
 
+### Script exit codes
+
+Scripts can use the following exit codes to control hook execution:
+
+| Exit code | Behavior |
+| --- | --- |
+| `0` | Indicates successful execution. The configured `expect` and `return` fields determine the hook result. |
+| `1` | Indicates execution failure. The configured `expect` and `return` fields determine the hook result. |
+| `2` | Indicates an invalid argument or unsupported option. The hook immediately fails, regardless of the configured `expect` and `return` values. |
+
+Exit code `2` is reserved by `bash-hooks` for argument validation errors and should be used by scripts when receiving unknown or invalid options.
+
 ## Global Installation
 
 The global installer (`install.sh`) installs `bash-hooks` in the user's local binary directory and adds its directory to `PATH`.
@@ -350,7 +362,14 @@ Runs Zig's formatter to check staged files for formatting issues and optionally 
 
 #### `run-tests.sh`
 
-Runs all Zig tests.
+Runs all Zig tests using `zig build test`. If any test fails, the script exits with an error.
+
+**Flags**
+
+| Flag | Description |
+|---|---|
+| `--summary`, `--s` | Displays the complete test summary (`all`) instead of only failures (`failures`). |
+| `--summary=<value>`, `--s=<value>` | Specifies the test summary level passed to `zig build test --summary`. Defaults to `failures`. |
 
 ### Shell
 
