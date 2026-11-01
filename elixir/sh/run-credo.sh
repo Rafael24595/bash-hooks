@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.3.0"
+_VERSION="1.3.1"
 _PACKAGE="run-credo"
 _DETAILS="Run Credo analysis tool."
 
@@ -12,12 +12,18 @@ STRICT=""
 FORCE_ALL=false
 
 for FLAG in "$@"; do
-    if [ "$FLAG" == "--strict" ] || [ "$FLAG" == "--s" ]; then
-        STRICT="--strict"
-    fi
-    if [ "$FLAG" == "--force-all" ] || [ "$FLAG" == "--fa" ]; then
-        FORCE_ALL=true
-    fi
+    case "$FLAG" in
+        --strict | --s)
+            STRICT=true
+            ;;
+        --force-all | --fa)
+            FORCE_ALL=true
+            ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
+            exit 1
+            ;;
+    esac
 done
 
 STAGED_FILES=$(git diff --name-only --cached --diff-filter=ACMR)

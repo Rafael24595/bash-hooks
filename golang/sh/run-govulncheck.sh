@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.1.1"
+_VERSION="1.1.2"
 _PACKAGE="run-govulncheck"
 _DETAILS="Executes govulncheck to check for vulnerabilities in dependencies."
 
@@ -14,9 +14,15 @@ source ./golang/sh/utils-golang.sh
 INSTALL=false
 
 for FLAG in "$@"; do
-    if [ "$FLAG" == "--install" ] || [ "$FLAG" == "--i" ]; then
-        INSTALL=true
-    fi
+    case "$FLAG" in
+        --install | --i)
+            INSTALL=true
+            ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
+            exit 1
+            ;;
+    esac
 done
 
 # Ensure that govulncheck is installed

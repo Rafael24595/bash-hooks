@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.2.0"
+_VERSION="1.2.1"
 _PACKAGE="run-eslint"
 _DETAILS="Run ESLint analysis tool."
 
@@ -14,9 +14,15 @@ source ./tools/sh/utils.sh
 FORCE_ALL=false
 
 for FLAG in "$@"; do
-    if [ "$FLAG" == "--force-all" ] || [ "$FLAG" == "--fa" ]; then
-        FORCE_ALL=true
-    fi
+    case "$FLAG" in
+        --force-all | --fa)
+            FORCE_ALL=true
+            ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
+            exit 1
+            ;;
+    esac
 done
 
 STAGED_FILES=$(git diff --name-only --cached --diff-filter=ACMR)

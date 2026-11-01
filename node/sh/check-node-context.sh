@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 _PACKAGE="check-node-context"
 _DETAILS="Executes functions to validate whether the current project is a valid Node project."
 
@@ -22,18 +22,24 @@ if [ "$#" -eq 0 ]; then
 fi
 
 for FLAG in "$@"; do
-    if [ "$FLAG" == "--project" ] || [ "$FLAG" == "--p" ]; then
-        PROJECT=true
-    fi
-    if [ "$FLAG" == "--js-staged" ] || [ "$FLAG" == "--js" ]; then
-        STAGED+=("--js")
-    fi
-    if [ "$FLAG" == "--ts-staged" ] || [ "$FLAG" == "--ts" ]; then
-        STAGED+=("--ts")
-    fi
-    if [ "$FLAG" == "--install" ] || [ "$FLAG" == "--i" ]; then
-        INSTALL=true
-    fi
+    case "$FLAG" in
+        --project | --p)
+            PROJECT=true
+            ;;
+        --js-staged | --js)
+            STAGED+=("--js")
+            ;;
+        --ts-staged | --ts)
+            STAGED+=("--ts")
+            ;;
+        --install | --i)
+            INSTALL=true
+            ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
+            exit 1
+            ;;
+    esac
 done
 
 echo -e "\nChecking Node context..."

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 _PACKAGE="run-fmt"
 _DETAILS="Run Zig's fmt to check staged files for formatting issues and optionally fix them."
 
@@ -10,14 +10,16 @@ source ./scripts/colors.sh
 
 APPLY=false
 
-if [ "$#" -eq 0 ]; then
-    APPLY=false
-fi
-
 for FLAG in "$@"; do
-    if [ "$FLAG" == "--apply" ] || [ "$FLAG" == "--a" ]; then
-        APPLY=true
-    fi
+    case "$FLAG" in
+        --apply | --a)
+            APPLY=true
+            ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
+            exit 1
+            ;;
+    esac
 done
 
 mapfile -t STAGED_FILES < <(git diff --name-only --cached --diff-filter=ACMR | grep -E '\.(zig|zon)$')

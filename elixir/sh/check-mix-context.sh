@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.1"
+_VERSION="1.0.2"
 _PACKAGE="check-mix-context"
 _DETAILS="Executes functions to validate whether the current project is a valid Mix (Elixir) project."
 
@@ -22,15 +22,21 @@ if [ "$#" -eq 0 ]; then
 fi
 
 for FLAG in "$@"; do
-    if [ "$FLAG" == "--project" ] || [ "$FLAG" == "--p" ]; then
-        PROJECT=true
-    fi
-    if [ "$FLAG" == "--staged" ] || [ "$FLAG" == "--s" ]; then
-        STAGED=true
-    fi
-    if [ "$FLAG" == "--install" ] || [ "$FLAG" == "--i" ]; then
-        INSTALL=true
-    fi
+    case "$FLAG" in
+        --project | --p)
+            PROJECT=true
+            ;;
+        --staged | --s)
+            STAGED=true
+            ;;
+        --install | --i)
+            INSTALL=true
+            ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $FLAG${RESET}"
+            exit 1
+            ;;
+    esac
 done
 
 echo -e "\nChecking Mix (Elixir) context..."
