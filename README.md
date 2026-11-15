@@ -209,15 +209,43 @@ Runs `golangci-lint` to identify errors in staged Go files.
 
 #### `run-tests.sh`
 
-Runs all Go tests.
+Runs Go tests across the main build configuration and any additional build variants. Each variant is executed as an independent test flow using Go build tags.
 
 **Flags**
 
 | Flag | Description |
 |---|---|
-| `--tags=<tag>`, `--t=<tag>` | Defines the test build tags. Can be specified multiple times. Tags are combined into a comma-separated list. |
-| `--race`, `--r` | Runs tests using the race detector. |
-| `--cover=<threshold>`, `--c=<threshold>` | Runs tests with coverage analysis. If a threshold is specified, the check fails when coverage falls below that value. The threshold can be expressed as a percentage (e.g., `80.0`) or as an absolute number of statements (e.g., `100`). |
+| `--tags=<tag>`, `--t=<tag>` | Defines the build tags for the main test flow. Can be specified multiple times. Tags are combined into a comma-separated list. |
+| `--variant-tags=<tag>`, `--vt=<tag>` | Defines an additional build variant. Each occurrence creates an independent test flow using the specified build tags. Can be specified multiple times. |
+| `--race`, `--r` | Runs tests using the Go race detector. |
+| `--cover`, `--c` | Enables code coverage reporting. |
+| `--cover=<threshold>`, `--c=<threshold>` | Enables code coverage reporting and defines the minimum required coverage percentage. The check fails if coverage falls below the specified threshold. Accepts values between `0` and `100`. |
+
+**Build variants**
+
+The main flow uses the tags specified through `--tags`. Each `--variant-tags` occurrence creates an additional independent flow.
+
+Variant tags replace the main flow tags rather than being combined with them. All flows inherit the common execution options, such as race detection and coverage reporting.
+
+**Example**
+
+```bash
+# Run the main configuration and two additional build variants
+./run-tests.sh \
+    --tags=integration,debug \
+    --variant-tags=postgres \
+    --variant-tags=mysql \
+    --race \
+    --cover=80
+```
+
+This configuration executes three independent test flows:
+
+1. Main flow: `integration,debug`
+2. PostgreSQL variant: `postgres`
+3. MySQL variant: `mysql`
+
+Each flow runs with race detection and coverage reporting enabled, requiring at least 80% code coverage.
 
 #### `run-govulncheck.sh`
 
