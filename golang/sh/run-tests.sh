@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.6.1"
+_VERSION="1.7.0"
 _PACKAGE="run-tests"
 _DETAILS="Run all Go tests."
 
@@ -11,8 +11,12 @@ source ./scripts/colors.sh
 # shellcheck disable=SC1091
 source ./tools/sh/math.sh
 
+FLOWS=()
+
 RACE=false
 TAGS=()
+
+VARIANT_TAGS=()
 
 COVERAGE_ENABLED=false
 COVERAGE_THRESHOLD=0
@@ -21,6 +25,9 @@ for FLAG in "$@"; do
     case "$FLAG" in
         --tags=* | --t=*)
             TAGS+=("${FLAG#*=}")
+            ;;
+        --variant-tags=* | --vt=*)
+            VARIANT_TAGS+=("${FLAG#*=}")
             ;;
         --race | --r)
             RACE=true
@@ -42,14 +49,15 @@ done
 if ! [[ "$COVERAGE_THRESHOLD" =~ ^([0-9]+([.][0-9]+)?)$ ]] || 
     is_float_less_than "$COVERAGE_THRESHOLD" 0 || 
     is_float_greater_than "$COVERAGE_THRESHOLD" 100; then
-        echo -e "${RED}\n  ✗ Invalid coverage threshold: ${COVERAGE_THRESHOLD}%${RESET}"
+        echo -e "\n${RED}  ✗ Invalid coverage threshold: ${COVERAGE_THRESHOLD}%${RESET}"
         exit 1
 fi
 
 # Run Go tests on all the Go files in the project
-echo -e "${BOLD}\nRunning Go tests...\n${RESET}"
+echo -e "\n${BOLD}Running Go tests...\n${RESET}"
 
-ARGS=(-v -failfast ./...)
+ARGS=(-v -failfast)
+TARGET="./..."
 
 if [ "$RACE" = true ]; then
     echo -e "  ${GREEN}✓ Race detection enabled.${RESET}"
@@ -67,66 +75,91 @@ fi
 
 if (( ${#TAGS[@]} > 0 )); then
     JOINED=$(IFS=,; echo "${TAGS[*]}")
-    echo -e "  ${GREEN}✓ Tags specified: ${YELLOW}${JOINED}${RESET}"
-    ARGS=(-tags="$JOINED" "${ARGS[@]}")
+    FLOWS+=("-tags=${JOINED}")
+    echo -e "  ${GREEN}✓ Main tags specified: ${YELLOW}${JOINED}${RESET}"
+else
+    FLOWS+=("")
 fi
 
-# Run tests on all Go files in the repository (including any test files)
-# -v for verbose output to see detailed results
-# -failfast to stop at the first test failure
-OUTPUT=$(go test "${ARGS[@]}")
+for VARIANT_TAG in "${VARIANT_TAGS[@]}"; do
+    FLOWS+=("-tags=${VARIANT_TAG}")
+    echo -e "  ${GREEN}✓ Build variant specified: ${YELLOW}${VARIANT_TAG}${RESET}"
+done
 
-# Capture the exit code of `go test`
-TEST_EXIT_CODE=$?
+TOTAL_FLOWS=${#FLOWS[@]}
+FLOW_INDEX=0
 
-TOTAL_TESTS=$(echo "$OUTPUT" | grep -c 'RUN')
+INDENT=" "
 
-printf "%b\n" "$OUTPUT"
+for FLOW in "${FLOWS[@]}"; do
+    ((FLOW_INDEX++))
 
-echo -e "${BOLD}\nTotal tests run: ${YELLOW}${TOTAL_TESTS}${RESET}"
+    echo -e "\n${BOLD}Flow ${FLOW_INDEX}/${TOTAL_FLOWS} - Running${RESET}"
 
-if [ $TEST_EXIT_CODE -ne 0 ]; then
-   FAILED_TESTS=$(echo "$OUTPUT" | grep '^--- FAIL:' | awk '{print $3}')
+    FLOW_ARGS=()
 
-    if [ -z "$FAILED_TESTS" ]; then
-        echo -e "${RED}\nNo specific failed tests found.${RESET}"
+    if [ -n "$FLOW" ]; then
+        FLOW_ARGS+=("$FLOW")
+    fi
+
+    FLOW_ARGS+=("${ARGS[@]}")
+
+    echo -e "\n${INDENT}- Target: ${YELLOW}${TARGET}${RESET}"
+    echo -e "${INDENT}- Flags: ${YELLOW}${FLOW_ARGS[*]}${RESET}\n"
+
+    OUTPUT=$(go test "${FLOW_ARGS[@]}" "${TARGET}")
+
+    TEST_EXIT_CODE=$?
+
+    while IFS= read -r LINE; do
+        printf '%s%s\n' "$INDENT" "$LINE"
+    done <<< "$OUTPUT"
+
+    TOTAL_TESTS=$(echo "$OUTPUT" | grep -c 'RUN')
+
+    echo -e "\n${INDENT}${BOLD}Total tests run: ${YELLOW}${TOTAL_TESTS}${RESET}"
+
+    if [ $TEST_EXIT_CODE -ne 0 ]; then
+    FAILED_TESTS=$(echo "$OUTPUT" | grep '^--- FAIL:' | awk '{print $3}')
+
+        if [ -z "$FAILED_TESTS" ]; then
+            echo -e "\n${RED}No specific failed tests found.${RESET}"
+            exit $TEST_EXIT_CODE
+        fi
+
+        echo -e "\n${RED}Some tests failed. Please fix them before committing.${RESET}"
+
+        FAILED_PACKAGES=$(echo "$OUTPUT" | grep '^FAIL\s' | awk '{print $2}')
+
+        echo -e "\n${RED}Failed tests ($(echo "$FAILED_TESTS" | wc -l)):${RESET}"
+
+        # shellcheck disable=SC2001
+        echo "$FAILED_TESTS" | sed 's/^/  - /'
+
+        echo -e "\n${RED}Failed packages ($(echo "$FAILED_PACKAGES" | wc -l)):${RESET}"
+
+        # shellcheck disable=SC2001
+        echo "$FAILED_PACKAGES" | sed 's/^/  - /'
+
         exit $TEST_EXIT_CODE
     fi
 
-    echo -e "${RED}\nSome tests failed. Please fix them before committing.${RESET}"
-
-    FAILED_PACKAGES=$(echo "$OUTPUT" | grep '^FAIL\s' | awk '{print $2}')
-
-    echo -e "${RED}\nFailed tests ($(echo "$FAILED_TESTS" | wc -l)):${RESET}"
-
-    # shellcheck disable=SC2001
-    echo "$FAILED_TESTS" | sed 's/^/  - /'
-
-    echo -e "${RED}\nFailed packages ($(echo "$FAILED_PACKAGES" | wc -l)):${RESET}"
-
-    # shellcheck disable=SC2001
-    echo "$FAILED_PACKAGES" | sed 's/^/  - /'
-
-    exit $TEST_EXIT_CODE
-fi
-
-COVERAGE_PERCENT=0
-if [ "$COVERAGE_ENABLED" = true ] && [ -f coverage.out ]; then
-    COVERAGE_PERCENT=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
-    echo -e "${BOLD}Code coverage: ${YELLOW}${COVERAGE_PERCENT}${RESET}"
-fi
-
-if is_float_greater_than "$COVERAGE_THRESHOLD" "0" && [ -n "$COVERAGE_PERCENT" ]; then
-    COVERAGE_VALUE="${COVERAGE_PERCENT%\%}"
-
-    if is_float_less_than "$COVERAGE_VALUE" "$COVERAGE_THRESHOLD"; then
-        echo -e "${RED}\nCode coverage ${COVERAGE_PERCENT} is below the required threshold of ${COVERAGE_THRESHOLD}%.${RESET}"
-        exit 1
-    else
-        echo -e "${GREEN}\nCode coverage ${COVERAGE_PERCENT} meets the required threshold of ${COVERAGE_THRESHOLD}%.${RESET}"
+    COVERAGE_PERCENT=0
+    if [ "$COVERAGE_ENABLED" = true ] && [ -f coverage.out ]; then
+        COVERAGE_PERCENT=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+        echo -e "${INDENT}${BOLD}Code coverage: ${YELLOW}${COVERAGE_PERCENT}${RESET}"
     fi
-fi
 
-echo -e "${GREEN}\nAll tests passed! Ready to commit.${RESET}"
-exit 0
+    if is_float_greater_than "$COVERAGE_THRESHOLD" "0" && [ -n "$COVERAGE_PERCENT" ]; then
+        COVERAGE_VALUE="${COVERAGE_PERCENT%\%}"
 
+        if is_float_less_than "$COVERAGE_VALUE" "$COVERAGE_THRESHOLD"; then
+            echo -e "\n${RED}Code coverage ${COVERAGE_PERCENT} is below the required threshold of ${COVERAGE_THRESHOLD}%.${RESET}"
+            exit 1
+        else
+            echo -e "\n${INDENT}${GREEN}Code coverage ${COVERAGE_PERCENT} meets the required threshold of ${COVERAGE_THRESHOLD}%.${RESET}"
+        fi
+    fi
+done
+
+echo -e "\n${GREEN}All tests passed across ${TOTAL_FLOWS} flows! Ready to commit.${RESET}"
