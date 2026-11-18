@@ -224,7 +224,7 @@ Runs `golangci-lint` to identify errors in staged Go files.
 
 #### `run-tests.sh`
 
-Runs Go tests across the main build configuration and any additional build variants. Each variant is executed as an independent test flow using Go build tags.
+Runs Go tests across the main build configuration and any additional build variants. Each variant is executed as an independent test flow using Go build tags, in every selected module.
 
 **Flags**
 
@@ -235,12 +235,26 @@ Runs Go tests across the main build configuration and any additional build varia
 | `--race`, `--r` | Runs tests using the Go race detector. |
 | `--cover`, `--c` | Enables code coverage reporting. |
 | `--cover=<threshold>`, `--c=<threshold>` | Enables code coverage reporting and defines the minimum required coverage percentage. The check fails if coverage falls below the specified threshold. Accepts values between `0` and `100`. |
+| `--module=<path>`, `--m=<path>` | Runs the tests of the given modules. See [Go modules](#go-modules). |
+| `--discover`, `--d` | Runs the tests of every module of the repository. See [Go modules](#go-modules). |
 
 **Build variants**
 
 The main flow uses the tags specified through `--tags`. Each `--variant-tags` occurrence creates an additional independent flow.
 
 Variant tags replace the main flow tags rather than being combined with them. All flows inherit the common execution options, such as race detection and coverage reporting.
+
+**Modules and summary**
+
+Every flow runs in every module, from the module's directory: with two modules and three flows, the tests run six times. All runs are executed even when one fails, and coverage and its threshold apply to each run on its own.
+
+After the last run, a summary lists every run with its tests, coverage and result, followed by the details of those that failed:
+
+- **tests failed**: the failed tests and packages.
+- **did not build or run**: no test failed, but `go test` did; the last lines of its output, which usually hold the build error.
+- **coverage below the threshold**: the tests passed, but the coverage did not reach `--cover=<threshold>`.
+
+The script exits with code `1` when any run failed.
 
 **Example**
 
