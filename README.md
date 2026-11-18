@@ -163,6 +163,19 @@ Examples:
 
 ### Golang
 
+#### Go modules
+
+By default, the Go scripts work on the module at the repository root (`go.mod` in the workspace root). Scripts that support it can work on other modules, or on several:
+
+| Flag | Description |
+|---|---|
+| `--module=<path>`, `--m=<path>` | Works on the module in `<path>`, relative to the repository root. Can be specified multiple times, or as a comma-separated list. `.` is the root module. |
+| `--discover`, `--d` | Works on every module of the repository: every tracked or staged `go.mod`, except those under `testdata`, `vendor`, or directories starting with `_` or `.`, which `go ./...` skips too. Cannot be combined with `--module`. |
+
+Paths must stay inside the repository and use `/`: absolute paths, `..` and `\` are rejected with exit code `2`. With `--discover`, a repository without any `go.mod` exits with code `1`.
+
+A staged file belongs to its nearest module: in a repository with modules at `.` and `tools/a`, a change in `tools/a/main.go` belongs to `tools/a`, not to the root.
+
 #### `check-go-context.sh`
 
 Executes checks to validate whether the current project is a valid Go project.
@@ -171,11 +184,13 @@ Executes checks to validate whether the current project is a valid Go project.
 
 | Flag | Description |
 |---|---|
-| `--project`, `--p` | Verifies if this is a Go project. |
-| `--staged`, `--s` | Checks for staged Go files. |
+| `--project`, `--p` | Verifies that every module has a `go.mod`. |
+| `--staged`, `--s` | Checks that the staged changes touch at least one of the modules: Go files, `go.mod` or `go.sum`, deletions included. |
 | `--install`, `--i` | Verifies if Go is installed. |
+| `--module=<path>`, `--m=<path>` | Checks the given modules. See [Go modules](#go-modules). |
+| `--discover`, `--d` | Checks every module of the repository. See [Go modules](#go-modules). |
 
-If no flags are selected, all checks are executed.
+If none of `--project`, `--staged` or `--install` is selected, all checks are executed. `--module` and `--discover` only choose which modules are checked.
 
 #### `run-fieldalignment.sh`
 
