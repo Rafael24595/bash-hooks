@@ -208,19 +208,34 @@ Formats all Go files.
 
 #### `run-linter.sh`
 
-Runs `golangci-lint` to identify errors in staged Go files.
+Runs `golangci-lint` in every selected module and reports the issues of the staged Go files.
 
 **Flags**
 
 | Flag | Description |
 |---|---|
 | `--install`, `--i` | Installs the latest version of `golangci-lint` if it is not already installed. |
-| `--strict`, `--s` | Enables strict mode. If any file contains errors, regardless of whether it is staged, the execution is marked as failed. |
+| `--strict`, `--s` | Enables strict mode: any issue fails the check, whether its file is staged or not. |
 | `--enable=<lnt>`, `--e=<lnt>` | Enables a specific linter. Can be specified multiple times. Linters are combined into a comma-separated list. |
+| `--module=<path>`, `--m=<path>` | Lints the given modules. See [Go modules](#go-modules). |
+| `--discover`, `--d` | Lints every module of the repository. See [Go modules](#go-modules). |
+
+**Staged files and summary**
+
+`golangci-lint` runs on the whole module, from the module's directory, and its output is shown in full. Only the issues of staged files fail the check, unless `--strict` is set; the paths are reported relative to the repository root, as Git writes them.
+
+After the last module, a summary lists every module with:
+
+- **Issues**: the issues that decide the result (in staged files, or all of them with `--strict`).
+- **Files**: how many files those issues are in.
+- **Unstaged**: the issues in files that are not staged, which do not fail the check (`-` with `--strict`).
+- **Result**: passed, files with issues, or `golangci-lint` failed (an exit code other than `0` or `1`, such as an invalid configuration), followed by the issues and the last lines of the output of those that failed.
+
+The script exits with code `1` when any module failed.
 
 **Dependencies**
 
-- `golangci-lint` — `1.62.0` ([GitHub](https://github.com/golangci/golangci-lint))
+- `golangci-lint` — `1.62.0` ([GitHub](https://github.com/golangci/golangci-lint)); `--path-prefix` is required.
 
 #### `run-tests.sh`
 
