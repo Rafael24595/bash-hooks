@@ -16,6 +16,8 @@ source ./golang/sh/utils-golang.sh
 
 # an issue line of golangci-lint: "path/file.go:line:column: message (linter)"
 ISSUE_LINE='^[^[:space:]]+\.go:[0-9]+:'
+# a prefix to format the modules output
+INDENT=" "
 
 INSTALL=false
 STRICT=false
@@ -104,8 +106,6 @@ if (( ${#ENABLE[@]} > 0 )); then
     JOINED_LINTERS=$(join_by ", " "${ENABLE[@]}")
     echo -e "  ${GREEN}✓ Enabled linters: ${YELLOW}${JOINED_LINTERS}${RESET}"
 fi
-
-INDENT=" "
 
 RESULT_MODULE=()
 RESULT_STATUS=()

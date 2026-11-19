@@ -17,6 +17,9 @@ source ./tools/sh/string.sh
 # shellcheck disable=SC1091
 source ./golang/sh/utils-golang.sh
 
+# a prefix to format the modules output
+INDENT=" "
+
 FLOWS=()
 
 RACE=false
@@ -134,8 +137,6 @@ JOINED_FLOWS=$(join_by ", " "${FLOW_NAMES[@]}")
 
 echo -e "  ${GREEN}✓ Flows (${#FLOWS[@]}): ${YELLOW}${JOINED_FLOWS}${RESET}"
 echo -e "  ${GREEN}✓ Runs: ${YELLOW}${RUNS}${RESET}${GREEN} (${#MODULE_LIST[@]} module(s) x ${#FLOWS[@]} flow(s))${RESET}"
-
-INDENT=" "
 
 RESULT_MODULE=()
 RESULT_FLOW=()
