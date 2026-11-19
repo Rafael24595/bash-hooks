@@ -243,7 +243,11 @@ print_summary() {
     local TEST_COUNT
     local PACKAGE_COUNT
 
-    local MODULE_WIDTH FLOW_WIDTH TESTS_WIDTH COVERAGE_WIDTH COVERAGE
+    local MODULE_WIDTH
+    local FLOW_WIDTH
+    local TESTS_WIDTH
+    local COVERAGE_WIDTH
+    local COVERAGE
 
     local -a LABELS=()
     for I in "${!RESULT_MODULE[@]}"; do
@@ -262,10 +266,22 @@ print_summary() {
 
     for I in "${!LABELS[@]}"; do
         case "${RESULT_STATUS[I]}" in
-            passed)       COLOR=$GREEN; TEXT="✓ passed" ;;
-            failed)       COLOR=$RED;   TEXT="✗ tests failed" ;;
-            error)        COLOR=$RED;   TEXT="✗ did not build or run" ;;
-            low-coverage) COLOR=$RED;   TEXT="✗ coverage below ${COVERAGE_THRESHOLD}%" ;;
+            passed)
+                COLOR=$GREEN
+                TEXT="✓ passed"
+                ;;
+            failed)
+                COLOR=$RED
+                TEXT="✗ tests failed"
+                ;;
+            error)
+                COLOR=$RED
+                TEXT="✗ did not build or run"
+                ;;
+            low-coverage)
+                COLOR=$RED;
+                TEXT="✗ coverage below ${COVERAGE_THRESHOLD}%"
+                ;;
         esac
 
         if [ "${RESULT_STATUS[I]}" != passed ]; then
