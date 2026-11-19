@@ -53,8 +53,15 @@ done
 if ! command -v golangci-lint &> /dev/null; then
     if $INSTALL; then
         echo -e "${GREEN}Installing golangci-lint...${RESET}"
+
         ensure_go_installed
-        go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+        go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest || exit 1
+        if ! command -v golangci-lint &> /dev/null; then
+            echo -e "${RED}\ngolangci-lint was installed but is not in PATH (add \$(go env GOPATH)/bin).${RESET}"
+            exit 1
+        fi
+
         echo -e "${GREEN}golangci-lint installed.${RESET}"
     else
         echo -e "${RED}\ngolangci-lint could not be found. Please install it to proceed.${RESET}"
