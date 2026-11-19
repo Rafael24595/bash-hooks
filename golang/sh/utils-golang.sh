@@ -86,8 +86,8 @@ staged_go_modules() {
     MODULES=$(printf '%s\n' "$MODULES" |
         awk '{ print ($0 == "." ? 0 : length($0)) "\t" $0 }' |
         sort -rn |
-        cut -f2- |                                            
-        uniq)      
+        cut -f2- |
+        uniq)
 
     while IFS= read -r -d '' FILE; do
         while IFS= read -r MODULE; do
@@ -107,7 +107,7 @@ staged_go_modules() {
 resolve_go_modules() {
     local DISCOVER=$1
     local DECLARED=("${@:2}")
-    
+
     local MODULE
     local MODULES
 
