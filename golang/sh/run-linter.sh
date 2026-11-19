@@ -164,15 +164,19 @@ lint_module() {
             TOTAL=$((TOTAL + 1))
             FILE=${LINE%%:*}
 
-            if $STRICT || grep -Fxq -- "$FILE" <<< "$STAGED_FILES"; then
-                COUNTS=true
-                ISSUES=$((ISSUES + 1))
-                FILES+="$FILE"$'\n'
-            else
+            if [[ "$STRICT" != true ]] && ! grep -Fxq -- "$FILE" <<< "$STAGED_FILES"; then
                 COUNTS=false
+                continue
             fi
-        elif [[ $LINE =~ $CLOSING_LINE ]]; then
+
+            COUNTS=true
+            ISSUES=$((ISSUES + 1))
+            FILES+="$FILE"$'\n'
+        fi
+
+        if [[ $LINE =~ $CLOSING_LINE ]]; then
             COUNTS=false
+            continue
         fi
 
         if $COUNTS; then
