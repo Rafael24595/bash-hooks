@@ -293,13 +293,29 @@ Each flow runs with race detection and coverage reporting enabled, requiring at 
 
 #### `run-govulncheck.sh`
 
-Runs `govulncheck` to check dependencies for known vulnerabilities.
+Runs `govulncheck` on each selected Go module to check its dependencies for known vulnerabilities.
 
 **Flags**
 
 | Flag | Description |
 |---|---|
-| `--install` | Installs the latest version of `govulncheck` if it is not already installed. |
+| `--install`, `--i` | Installs the latest version of `govulncheck` if it is not already installed. |
+| `--module=<path>`, `--m=<path>` | Scans the given modules. See [Go modules](#go-modules). |
+| `--discover`, `--d` | Scans every module of the repository. See [Go modules](#go-modules). |
+
+**Modules and summary**
+
+Every module is scanned with `govulncheck -show verbose`, from the module's directory, even when a previous one fails. The summary lists, per module, how many vulnerabilities were found at each level:
+
+| Column | Meaning | Fails the check |
+|---|---|---|
+| `Called` | Your code calls a vulnerable symbol. | Yes |
+| `Imported` | A vulnerable package is imported, but none of its vulnerable symbols are called. | No |
+| `Required` | A vulnerable module is required, but none of its vulnerable packages are imported. | No |
+
+A module fails when `govulncheck` exits with code `3` (your code calls a vulnerability) or with any code other than `0` (the scan itself failed). After the summary, the failures list the called vulnerabilities of each affected module without their call traces, which are printed in full above, or the last lines of the output when the scan failed.
+
+The script exits with code `1` when any module failed.
 
 **Dependencies**
 
