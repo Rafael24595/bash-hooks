@@ -55,3 +55,20 @@ join_by() {
 
     printf '%s\n' "$RESULT"
 }
+
+# indent prints every line of a text with a prefix in front.
+#
+# Parameters:
+#   $1 -> Prefix
+#   $2 -> Text, one or more lines
+#
+# Examples:
+#   indent "  - " $'a\nb'  => "  - a" and "  - b", each on its own line
+indent() {
+    local PREFIX=$1
+    local LINE
+
+    while IFS= read -r LINE; do
+        printf '%s%s\n' "$PREFIX" "$LINE"
+    done <<< "$2"
+}

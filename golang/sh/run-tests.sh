@@ -174,7 +174,6 @@ run_flow() {
 
     local LABEL
     local MESSAGE
-    local LINE
 
     LABEL="${POSITION} ${REFERENCE}"
 
@@ -193,9 +192,7 @@ run_flow() {
     OUTPUT=$(cd "$MODULE" && go test "${FLOW_ARGS[@]}" ./... 2>&1)
     EXIT_CODE=$?
 
-    while IFS= read -r LINE; do
-        printf '%s%s\n' "$INDENT" "$LINE"
-    done <<< "$OUTPUT"
+    indent "$INDENT" "$OUTPUT"
 
     TOTAL=$(grep -c '^=== RUN' <<< "$OUTPUT")
 
@@ -305,14 +302,11 @@ print_summary() {
 
         if [ "${RESULT_STATUS[I]}" = failed ]; then
             echo "    Failed tests (${TEST_COUNT}):"
-            # shellcheck disable=SC2001
-            sed 's/^/      - /' <<< "${FAILED_TESTS}"
+            indent "      - " "$FAILED_TESTS"
             echo "    Failed packages (${PACKAGE_COUNT}):"
-            # shellcheck disable=SC2001
-            sed 's/^/      - /' <<< "${FAILED_PACKAGES}"
+            indent "      - " "$FAILED_PACKAGES"
         else
-            # shellcheck disable=SC2001
-            sed 's/^/    /' <<< "${RESULT_DETAIL[I]}"
+            indent "    " "${RESULT_DETAIL[I]}"
         fi
     done
 
