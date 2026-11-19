@@ -70,7 +70,7 @@ if ! command -v golangci-lint &> /dev/null; then
 fi
 
 # Run golangci-lint across the entire repository (all Go files)
-echo -e "${BOLD}\nRunning golangci-lint on all Go files in the repository...\n${RESET}"
+echo -e "${BOLD}\nRunning golangci-lint...\n${RESET}"
 
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
 
