@@ -49,7 +49,6 @@ for FLAG in "$@"; do
     esac
 done
 
-# Ensure that golangci-lint is installed
 if ! command -v golangci-lint &> /dev/null; then
     if $INSTALL; then
         echo -e "${GREEN}Installing golangci-lint...${RESET}"
@@ -69,7 +68,6 @@ if ! command -v golangci-lint &> /dev/null; then
     fi
 fi
 
-# Run golangci-lint across the entire repository (all Go files)
 echo -e "${BOLD}\nRunning golangci-lint...\n${RESET}"
 
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
@@ -112,7 +110,7 @@ INDENT=" "
 RESULT_MODULE=()
 RESULT_STATUS=()
 RESULT_ISSUES=()
-RESULT_UNSTAGED=() 
+RESULT_UNSTAGED=()
 RESULT_FILES=()
 RESULT_DETAIL=()
 
