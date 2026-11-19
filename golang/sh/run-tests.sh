@@ -250,6 +250,7 @@ print_summary() {
     local COVERAGE
 
     local -a LABELS=()
+
     for I in "${!RESULT_MODULE[@]}"; do
         LABELS+=("$(module_label "${RESULT_MODULE[I]}")")
     done
