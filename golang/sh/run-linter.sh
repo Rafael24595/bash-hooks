@@ -16,6 +16,8 @@ source ./golang/sh/utils-golang.sh
 
 # an issue line of golangci-lint: "path/file.go:line:column: message (linter)"
 ISSUE_LINE='^[^[:space:]]+\.go:[0-9]+:'
+# the closing summary of golangci-lint: "3 issues:", followed by the count per linter
+CLOSING_LINE='^[0-9]+ issues?:'
 # a prefix to format the modules output
 INDENT=" "
 
