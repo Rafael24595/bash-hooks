@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.0"
+_VERSION="1.0.1"
 _PACKAGE="run-check"
 _DETAILS="Run Zig's ast-check on staged Zig files to detect errors."
 
@@ -25,7 +25,7 @@ for FILE in "${STAGED_FILES[@]}"; do
         FILES+=("$FILE")
         HAS_ERRORS=true
     else
-        echo -e "${GREEN}No errors found.${RESET}\n"    
+        echo -e "${GREEN}No errors found.${RESET}\n"
     fi
 done
 

@@ -74,7 +74,7 @@ process_package() {
         go tool cover -func=tmp_coverage.out
         EXIT_CODE_VERBOSE=$?
     fi
-    
+
     EXIT_CODE_GLOBAL=${EXIT_CODE_GLOBAL:-0}
     EXIT_CODE_VERBOSE=${EXIT_CODE_VERBOSE:-0}
     if [ "$EXIT_CODE_GLOBAL" -ne 0 ] || [ "$EXIT_CODE_VERBOSE" -ne 0 ]; then
