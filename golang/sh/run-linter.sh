@@ -54,7 +54,7 @@ for FLAG in "$@"; do
 done
 
 if ! command -v golangci-lint &> /dev/null; then
-    if $INSTALL; then
+    if [[ "$INSTALL" == true ]]; then
         echo -e "${GREEN}Installing golangci-lint...${RESET}"
 
         ensure_go_installed
@@ -89,13 +89,13 @@ for MODULE in "${MODULE_LIST[@]}"; do
 done
 
 JOINED_MODULES=$(join_by ", " "${MODULE_LABELS[@]}")
-if $DISCOVER; then
+if [[ "$DISCOVER" == true ]]; then
     echo -e "  ${GREEN}✓ Discovered modules (${#MODULE_LIST[@]}): ${YELLOW}${JOINED_MODULES}${RESET}"
 else
     echo -e "  ${GREEN}✓ Modules (${#MODULE_LIST[@]}): ${YELLOW}${JOINED_MODULES}${RESET}"
 fi
 
-if $STRICT; then
+if [[ "$STRICT" == true ]]; then
     echo -e "  ${GREEN}✓ Strict mode: ${YELLOW}enabled${RESET}"
 fi
 
@@ -179,7 +179,7 @@ lint_module() {
             continue
         fi
 
-        if $COUNTS; then
+        if [[ "$COUNTS" == true ]]; then
             REPORT+="$LINE"$'\n'
         fi
     done <<< "$PLAIN"
@@ -240,7 +240,7 @@ print_summary() {
         fi
 
         UNSTAGED=${RESULT_UNSTAGED[I]}
-        if $STRICT; then
+        if [[ "$STRICT" == true ]]; then
             UNSTAGED="-"
         fi
 
@@ -248,7 +248,7 @@ print_summary() {
             "${LABELS[I]}" "${RESULT_ISSUES[I]}" "${FILE_COUNTS[I]}" "$UNSTAGED" "$TEXT"
     done
 
-    if ! $STRICT && (( UNSTAGED_TOTAL > 0 )); then
+    if [[ "$STRICT" != true ]] && (( UNSTAGED_TOTAL > 0 )); then
         echo -e "\n  ${YELLOW}${UNSTAGED_TOTAL} issue(s) in files that are not staged were not checked; --strict includes them.${RESET}"
     fi
 

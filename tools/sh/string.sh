@@ -45,7 +45,7 @@ join_by() {
     local ITEM
 
     for ITEM in "$@"; do
-        if $FIRST; then
+        if [[ "$FIRST" == true ]]; then
             FIRST=false
         else
             RESULT+=$SEPARATOR

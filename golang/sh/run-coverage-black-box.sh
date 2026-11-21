@@ -58,16 +58,18 @@ process_package() {
     fi
 
     TEST_TARGET=""
-    if $INVALID_EMPTY || find "$PACKAGE_TEST" -maxdepth 1 -type f -name "*.go" | grep -q .; then
+    if [[ "$INVALID_EMPTY" == true ]] || find "$PACKAGE_TEST" -maxdepth 1 -type f -name "*.go" | grep -q .; then
         TEST_TARGET="./${PACKAGE_TEST#./}"
     fi
 
     echo -e "${GREEN}Testing '$PACKAGE_TEST' against '$PACKAGE_SOURCE'${RESET}\n"
 
     echo -e "${YELLOW}Global view of coverage:${RESET}"
+
     go test -coverpkg=./"${PACKAGE_SOURCE#./}" -coverprofile=tmp_coverage.out "$TEST_TARGET"
     EXIT_CODE_GLOBAL=$?
-    if $VERBOSE; then
+
+    if [[ "$VERBOSE" == true ]]; then
         echo -e "\n${YELLOW}Detailed coverage report:${RESET}"
         go tool cover -func=tmp_coverage.out
         EXIT_CODE_VERBOSE=$?
@@ -114,7 +116,7 @@ fi
 
 
 if [ ! -f coverage.out ]; then
-    if $SUCCESS_EMPTY; then
+    if [[ "$SUCCESS_EMPTY" == true ]]; then
         echo -e "${GREEN}No tests found, but success is allowed.${RESET}"
         exit 0
     else

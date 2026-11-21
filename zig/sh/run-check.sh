@@ -33,7 +33,7 @@ for FILE in "${FILES[@]}"; do
     echo -e "File '${BOLD}$FILE${RESET}' contains errors."
 done
 
-if [ "$HAS_ERRORS" == true ]; then
+if [[ "$HAS_ERRORS" == true ]]; then
     echo -e "${RED}\nError: At least one staged file contains errors. Please fix them before committing.${RESET}"
     exit 1
 fi

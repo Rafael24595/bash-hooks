@@ -92,7 +92,7 @@ while IFS= read -r FILE; do
 done <<< "$STAGED_FILES"
 
 # If at least one struct exceeded the threshold, block the commit.
-if [ "$HAS_ERRORS" = true ]; then
+if [[ "$HAS_ERRORS" == true ]]; then
     echo -e "${RED}\nError: At least one staged file contains errors. Please fix them before committing.${RESET}"
     exit 1
 fi

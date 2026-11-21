@@ -111,7 +111,7 @@ resolve_go_modules() {
     local MODULE
     local MODULES
 
-    if [ "$DISCOVER" = true ]; then
+    if [[ "$DISCOVER" == true ]]; then
         if (( ${#DECLARED[@]} > 0 )); then
             echo -e "${RED}\nError: --discover cannot be used with --module${RESET}" >&2
             return 2

@@ -43,7 +43,7 @@ for FLAG in "$@"; do
     esac
 done
 
-if ! $PROJECT && ! $STAGED && ! $INSTALL; then
+if [[ "$PROJECT" != true ]] && [[ "$STAGED" != true ]] && [[ "$INSTALL" != true ]]; then
     INSTALL=true
     PROJECT=true
     STAGED=true
@@ -51,23 +51,23 @@ fi
 
 echo -e "\nChecking Golang context..."
 
-if $DISCOVER; then
+if [[ "$DISCOVER" == true ]]; then
     echo -e "\nDiscovering Go modules..."
 fi
 
 MODULES=$(resolve_go_modules "$DISCOVER" "${DECLARED[@]}") || exit $?
 
-if $INSTALL; then
+if [[ "$INSTALL" == true ]]; then
     echo -e "\nVerifying if Go is installed..."
     ensure_go_installed && echo -e "${GREEN}\nGo is installed.${RESET}"
 fi
 
-if $PROJECT; then
+if [[ "$PROJECT" == true ]]; then
     echo -e "\nVerifying if this is a Go project..."
     ensure_go_project "$MODULES" && echo -e "${GREEN}\nGo project verified.${RESET}"
 fi
 
-if $STAGED; then
+if [[ "$STAGED" == true ]]; then
     echo -e "\nChecking for staged Go files..."
     ensure_go_staged "$MODULES" && echo -e "${GREEN}\nStaged Go files found.${RESET}"
 fi

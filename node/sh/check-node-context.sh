@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.1"
+_VERSION="1.0.2"
 _PACKAGE="check-node-context"
 _DETAILS="Executes functions to validate whether the current project is a valid Node project."
 
@@ -44,7 +44,7 @@ done
 
 echo -e "\nChecking Node context..."
 
-if $PROJECT; then
+if [[ "$PROJECT" == true ]]; then
     echo -e "\nVerifying if this is a Node project..."
     ensure_node_project && echo -e "${GREEN}\nNode project verified.${RESET}"
 fi
@@ -54,7 +54,7 @@ if [[ ${#STAGED[@]} -gt 0 ]]; then
     ensure_ecmascript_staged "${STAGED[@]}" && echo -e "${GREEN}\nStaged Ecmascript ${STAGED[*]} files found.${RESET}"
 fi
 
-if $INSTALL; then
+if [[ "$INSTALL" == true ]]; then
     echo -e "\nVerifying if Node is installed..."
     ensure_node_installed && echo -e "${GREEN}\nNode is installed.${RESET}"
 fi

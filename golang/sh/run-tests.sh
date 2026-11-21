@@ -86,12 +86,12 @@ done <<< "$MODULES"
 
 ARGS=(-v -failfast)
 
-if [ "$RACE" = true ]; then
+if [[ "$RACE" == true ]]; then
     echo -e "  ${GREEN}✓ Race detection: ${YELLOW}enabled${RESET}"
     ARGS=(-race "${ARGS[@]}")
 fi
 
-if [ "$COVERAGE_ENABLED" = true ]; then
+if [[ "$COVERAGE_ENABLED" == true ]]; then
     ARGS=(-coverprofile="$COVER_FILE" "${ARGS[@]}")
 
     if is_float_greater_than "$COVERAGE_THRESHOLD" 0; then
@@ -127,7 +127,7 @@ done
 RUNS=$(( ${#MODULE_LIST[@]} * ${#FLOWS[@]} ))
 
 JOINED_MODULES=$(join_by ", " "${MODULE_LABELS[@]}")
-if $DISCOVER; then
+if [[ "$DISCOVER" == true ]]; then
     echo -e "  ${GREEN}✓ Discovered modules (${#MODULE_LIST[@]}): ${YELLOW}${JOINED_MODULES}${RESET}"
 else
     echo -e "  ${GREEN}✓ Modules (${#MODULE_LIST[@]}): ${YELLOW}${JOINED_MODULES}${RESET}"
@@ -197,7 +197,7 @@ run_flow() {
 
     TOTAL=$(grep -c '^=== RUN' <<< "$OUTPUT")
 
-    if [ "$COVERAGE_ENABLED" = true ] && [ -s "$COVER_FILE" ]; then
+    if [[ "$COVERAGE_ENABLED" == true ]] && [ -s "$COVER_FILE" ]; then
         COVERAGE=$(cd "$MODULE" && go tool cover -func="$COVER_FILE" | awk '/^total:/ {print $3}')
     fi
 

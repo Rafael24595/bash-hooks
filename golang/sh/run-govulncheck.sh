@@ -50,7 +50,7 @@ for FLAG in "$@"; do
 done
 
 if ! command -v govulncheck &> /dev/null; then
-    if $INSTALL; then
+    if [[ "$INSTALL" == true ]]; then
         echo -e "${GREEN}Installing govulncheck...${RESET}"
 
         ensure_go_installed
@@ -83,7 +83,7 @@ for MODULE in "${MODULE_LIST[@]}"; do
 done
 
 JOINED_MODULES=$(join_by ", " "${MODULE_LABELS[@]}")
-if $DISCOVER; then
+if [[ "$DISCOVER" == true ]]; then
     echo -e "  ${GREEN}✓ Discovered modules (${#MODULE_LIST[@]}): ${YELLOW}${JOINED_MODULES}${RESET}"
 else
     echo -e "  ${GREEN}✓ Modules (${#MODULE_LIST[@]}): ${YELLOW}${JOINED_MODULES}${RESET}"
@@ -163,7 +163,7 @@ scan_module() {
             continue
         fi
 
-        if $IN_SECTION; then
+        if [[ "$IN_SECTION" == true ]]; then
             REPORT+="$LINE"$'\n'
         fi
     done <<< "$OUTPUT"

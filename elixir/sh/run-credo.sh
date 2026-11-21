@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.3.1"
+_VERSION="1.3.2"
 _PACKAGE="run-credo"
 _DETAILS="Run Credo analysis tool."
 
@@ -33,7 +33,7 @@ if [ -z "$STAGED_FILES" ]; then
 fi
 
 CREDO_TARGET=(".")
-if ! $FORCE_ALL ; then
+if [[ "$FORCE_ALL" != true ]] ; then
     readarray -t CREDO_TARGET <<< "$STAGED_FILES"
 fi
 
@@ -66,7 +66,7 @@ while IFS= read -r FILE; do
     fi
 done <<< "$STAGED_FILES"
 
-if [ "$HAS_ERRORS" = true ]; then
+if [[ "$HAS_ERRORS" == true ]]; then
     echo -e "${RED}\nError: At least one staged file contains errors. Please fix them before committing.${RESET}"
     exit 1
 fi
