@@ -21,6 +21,8 @@ CLOSING_LINE='^[0-9]+ issues?:'
 # a prefix to format the modules output
 INDENT=" "
 
+VERBOSE=false
+
 INSTALL=false
 STRICT=false
 ENABLE=()
@@ -30,6 +32,9 @@ DECLARED=()
 
 for FLAG in "$@"; do
     case "$FLAG" in
+        --verbose | --v)
+            VERBOSE=true
+            ;;
         --install | --i)
             INSTALL=true
             ;;
@@ -150,7 +155,9 @@ lint_module() {
     OUTPUT=$(cd "$MODULE" && golangci-lint run --path-prefix "$MODULE" "${ARGS[@]}" 2>&1)
     EXIT_CODE=$?
 
-    indent "$INDENT" "$OUTPUT"
+    if [[ "$VERBOSE" == true ]]; then
+        indent "$INDENT" "$OUTPUT"
+    fi
 
     PLAIN=$(sed -E -e 's/\x1B\[[0-9;]*[mK]//g' -e 's/\\/\//g' <<< "$OUTPUT" | tr -d '\r')
 

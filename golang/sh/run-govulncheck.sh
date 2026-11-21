@@ -25,6 +25,8 @@ TRACES_LINE='^[[:space:]]*Example traces found'
 # a prefix to format the modules output
 INDENT=" "
 
+VERBOSE=false
+
 INSTALL=false
 
 DISCOVER=false
@@ -32,6 +34,9 @@ DECLARED=()
 
 for FLAG in "$@"; do
     case "$FLAG" in
+        --verbose | --v)
+            VERBOSE=true
+            ;;
         --install | --i)
             INSTALL=true
             ;;
@@ -130,7 +135,9 @@ scan_module() {
     OUTPUT=$(cd "$MODULE" && govulncheck -show verbose ./... 2>&1)
     EXIT_CODE=$?
 
-    indent "$INDENT" "$OUTPUT"
+    if [[ "$VERBOSE" == true ]]; then
+        indent "$INDENT" "$OUTPUT"
+    fi
 
     if [ "$EXIT_CODE" -ne 0 ] && [ "$EXIT_CODE" -ne 3 ]; then
         record_result "$MODULE" error - - - "" "$(tail -n 15 <<< "$OUTPUT")"

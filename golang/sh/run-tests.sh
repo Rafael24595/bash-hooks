@@ -22,6 +22,8 @@ INDENT=" "
 
 FLOWS=()
 
+VERBOSE=false
+
 RACE=false
 TAGS=()
 
@@ -35,6 +37,9 @@ DECLARED=()
 
 for FLAG in "$@"; do
     case "$FLAG" in
+        --verbose | --v)
+            VERBOSE=true
+            ;;
         --tags=* | --t=*)
             TAGS+=("${FLAG#*=}")
             ;;
@@ -193,7 +198,9 @@ run_flow() {
     OUTPUT=$(cd "$MODULE" && go test "${FLOW_ARGS[@]}" ./... 2>&1)
     EXIT_CODE=$?
 
-    indent "$INDENT" "$OUTPUT"
+    if [[ "$VERBOSE" == true ]] || [ "$EXIT_CODE" -ne 0 ]; then
+        indent "$INDENT" "$OUTPUT"
+    fi
 
     TOTAL=$(grep -c '^=== RUN' <<< "$OUTPUT")
 
