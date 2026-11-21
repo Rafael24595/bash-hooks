@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.2.0"
+_VERSION="1.2.1"
 _PACKAGE="run-linter"
 _DETAILS="Runs bash syntax and shellcheck to find errors in staged Shell files."
 
@@ -54,7 +54,7 @@ while IFS= read -r FILE; do
 done <<< "$STAGED_FILES"
 
 # Check the boolean variable after the loop
-if [ "$HAS_ERRORS" = true ]; then
+if [[ "$HAS_ERRORS" == true ]]; then
     echo -e "${RED}\nError: At least one staged file contains errors, fix it before commit.${RESET}"
     exit 1
 fi

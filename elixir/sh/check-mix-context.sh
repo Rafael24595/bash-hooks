@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.2"
+_VERSION="1.0.3"
 _PACKAGE="check-mix-context"
 _DETAILS="Executes functions to validate whether the current project is a valid Mix (Elixir) project."
 
@@ -41,17 +41,17 @@ done
 
 echo -e "\nChecking Mix (Elixir) context..."
 
-if $PROJECT; then
+if [[ "$PROJECT" == true ]]; then
     echo -e "\nVerifying if this is a Mix project..."
     ensure_mix_project && echo -e "${GREEN}\nMix project verified.${RESET}"
 fi
 
-if $STAGED; then
+if [[ "$STAGED" == true ]]; then
     echo -e "\nChecking for staged Elixir files..."
     ensure_elixir_staged && echo -e "${GREEN}\nStaged Elixir files found.${RESET}"
 fi
 
-if $INSTALL; then
+if [[ "$INSTALL" == true ]]; then
     echo -e "\nVerifying if Elixir and Mix are installed..."
     ensure_elixir_installed && ensure_mix_installed && echo -e "${GREEN}\nElixir and Mix are installed.${RESET}"
 fi

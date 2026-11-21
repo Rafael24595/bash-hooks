@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.1"
+_VERSION="1.0.2"
 _PACKAGE="check-zig-context"
 _DETAILS="Executes functions to validate whether the current project is a valid Zig project."
 
@@ -41,17 +41,17 @@ done
 
 echo -e "\nChecking Zig context..."
 
-if $PROJECT; then
+if [[ "$PROJECT" == true ]]; then
     echo -e "\nVerifying if this is a Zig project..."
     ensure_zig_project && echo -e "${GREEN}\nZig project verified.${RESET}"
 fi
 
-if $STAGED; then
+if [[ "$STAGED" == true ]]; then
     echo -e "\nChecking for staged Zig files..."
     ensure_zig_staged && echo -e "${GREEN}\nStaged Zig files found.${RESET}"
 fi
 
-if $INSTALL; then
+if [[ "$INSTALL" == true ]]; then
     echo -e "\nVerifying if Zig is installed..."
     ensure_zig_installed && echo -e "${GREEN}\nZig is installed.${RESET}"
 fi

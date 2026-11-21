@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.1"
+_VERSION="1.0.2"
 _PACKAGE="run-fmt"
 _DETAILS="Run Zig's fmt to check staged files for formatting issues and optionally fix them."
 
@@ -42,7 +42,7 @@ while IFS= read -r FILE; do
 done <<< "$FILES"
 echo -e ""
 
-if [ "$APPLY" == false ]; then
+if [[ "$APPLY" == false ]]; then
   exit 1
 fi
 

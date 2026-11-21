@@ -163,6 +163,19 @@ Examples:
 
 ### Golang
 
+#### Go modules
+
+By default, the Go scripts work on the module at the repository root (`go.mod` in the workspace root). Scripts that support it can work on other modules, or on several:
+
+| Flag | Description |
+|---|---|
+| `--module=<path>`, `--m=<path>` | Works on the module in `<path>`, relative to the repository root. Can be specified multiple times, or as a comma-separated list. `.` is the root module. |
+| `--discover`, `--d` | Works on every module of the repository: every tracked or staged `go.mod`, except those under `testdata`, `vendor`, or directories starting with `_` or `.`, which `go ./...` skips too. Cannot be combined with `--module`. |
+
+Paths must stay inside the repository and use `/`: absolute paths, `..` and `\` are rejected with exit code `2`. With `--discover`, a repository without any `go.mod` exits with code `1`.
+
+A staged file belongs to its nearest module: in a repository with modules at `.` and `tools/a`, a change in `tools/a/main.go` belongs to `tools/a`, not to the root.
+
 #### `check-go-context.sh`
 
 Executes checks to validate whether the current project is a valid Go project.
@@ -171,11 +184,13 @@ Executes checks to validate whether the current project is a valid Go project.
 
 | Flag | Description |
 |---|---|
-| `--project`, `--p` | Verifies if this is a Go project. |
-| `--staged`, `--s` | Checks for staged Go files. |
+| `--project`, `--p` | Verifies that every module has a `go.mod`. |
+| `--staged`, `--s` | Checks that the staged changes touch at least one of the modules: Go files, `go.mod` or `go.sum`, deletions included. |
 | `--install`, `--i` | Verifies if Go is installed. |
+| `--module=<path>`, `--m=<path>` | Checks the given modules. See [Go modules](#go-modules). |
+| `--discover`, `--d` | Checks every module of the repository. See [Go modules](#go-modules). |
 
-If no flags are selected, all checks are executed.
+If none of `--project`, `--staged` or `--install` is selected, all checks are executed. `--module` and `--discover` only choose which modules are checked.
 
 #### `run-fieldalignment.sh`
 
@@ -193,23 +208,38 @@ Formats all Go files.
 
 #### `run-linter.sh`
 
-Runs `golangci-lint` to identify errors in staged Go files.
+Runs `golangci-lint` in every selected module and reports the issues of the staged Go files.
 
 **Flags**
 
 | Flag | Description |
 |---|---|
 | `--install`, `--i` | Installs the latest version of `golangci-lint` if it is not already installed. |
-| `--strict`, `--s` | Enables strict mode. If any file contains errors, regardless of whether it is staged, the execution is marked as failed. |
+| `--strict`, `--s` | Enables strict mode: any issue fails the check, whether its file is staged or not. |
 | `--enable=<lnt>`, `--e=<lnt>` | Enables a specific linter. Can be specified multiple times. Linters are combined into a comma-separated list. |
+| `--module=<path>`, `--m=<path>` | Lints the given modules. See [Go modules](#go-modules). |
+| `--discover`, `--d` | Lints every module of the repository. See [Go modules](#go-modules). |
+
+**Staged files and summary**
+
+`golangci-lint` runs on the whole module, from the module's directory, and its output is shown in full. Only the issues of staged files fail the check, unless `--strict` is set; the paths are reported relative to the repository root, as Git writes them.
+
+After the last module, a summary lists every module with:
+
+- **Issues**: the issues that decide the result (in staged files, or all of them with `--strict`).
+- **Files**: how many files those issues are in.
+- **Unstaged**: the issues in files that are not staged, which do not fail the check (`-` with `--strict`).
+- **Result**: passed, files with issues, or `golangci-lint` failed (an exit code other than `0` or `1`, such as an invalid configuration), followed by the issues and the last lines of the output of those that failed.
+
+The script exits with code `1` when any module failed.
 
 **Dependencies**
 
-- `golangci-lint` — `1.62.0` ([GitHub](https://github.com/golangci/golangci-lint))
+- `golangci-lint` — `1.62.0` ([GitHub](https://github.com/golangci/golangci-lint)); `--path-prefix` is required.
 
 #### `run-tests.sh`
 
-Runs Go tests across the main build configuration and any additional build variants. Each variant is executed as an independent test flow using Go build tags.
+Runs Go tests across the main build configuration and any additional build variants. Each variant is executed as an independent test flow using Go build tags, in every selected module.
 
 **Flags**
 
@@ -220,12 +250,26 @@ Runs Go tests across the main build configuration and any additional build varia
 | `--race`, `--r` | Runs tests using the Go race detector. |
 | `--cover`, `--c` | Enables code coverage reporting. |
 | `--cover=<threshold>`, `--c=<threshold>` | Enables code coverage reporting and defines the minimum required coverage percentage. The check fails if coverage falls below the specified threshold. Accepts values between `0` and `100`. |
+| `--module=<path>`, `--m=<path>` | Runs the tests of the given modules. See [Go modules](#go-modules). |
+| `--discover`, `--d` | Runs the tests of every module of the repository. See [Go modules](#go-modules). |
 
 **Build variants**
 
 The main flow uses the tags specified through `--tags`. Each `--variant-tags` occurrence creates an additional independent flow.
 
 Variant tags replace the main flow tags rather than being combined with them. All flows inherit the common execution options, such as race detection and coverage reporting.
+
+**Modules and summary**
+
+Every flow runs in every module, from the module's directory: with two modules and three flows, the tests run six times. All runs are executed even when one fails, and coverage and its threshold apply to each run on its own.
+
+After the last run, a summary lists every run with its tests, coverage and result, followed by the details of those that failed:
+
+- **tests failed**: the failed tests and packages.
+- **did not build or run**: no test failed, but `go test` did; the last lines of its output, which usually hold the build error.
+- **coverage below the threshold**: the tests passed, but the coverage did not reach `--cover=<threshold>`.
+
+The script exits with code `1` when any run failed.
 
 **Example**
 
@@ -249,13 +293,29 @@ Each flow runs with race detection and coverage reporting enabled, requiring at 
 
 #### `run-govulncheck.sh`
 
-Runs `govulncheck` to check dependencies for known vulnerabilities.
+Runs `govulncheck` on each selected Go module to check its dependencies for known vulnerabilities.
 
 **Flags**
 
 | Flag | Description |
 |---|---|
-| `--install` | Installs the latest version of `govulncheck` if it is not already installed. |
+| `--install`, `--i` | Installs the latest version of `govulncheck` if it is not already installed. |
+| `--module=<path>`, `--m=<path>` | Scans the given modules. See [Go modules](#go-modules). |
+| `--discover`, `--d` | Scans every module of the repository. See [Go modules](#go-modules). |
+
+**Modules and summary**
+
+Every module is scanned with `govulncheck -show verbose`, from the module's directory, even when a previous one fails. The summary lists, per module, how many vulnerabilities were found at each level:
+
+| Column | Meaning | Fails the check |
+|---|---|---|
+| `Called` | Your code calls a vulnerable symbol. | Yes |
+| `Imported` | A vulnerable package is imported, but none of its vulnerable symbols are called. | No |
+| `Required` | A vulnerable module is required, but none of its vulnerable packages are imported. | No |
+
+A module fails when `govulncheck` exits with code `3` (your code calls a vulnerability) or with any code other than `0` (the scan itself failed). After the summary, the failures list the called vulnerabilities of each affected module without their call traces, which are printed in full above, or the last lines of the output when the scan failed.
+
+The script exits with code `1` when any module failed.
 
 **Dependencies**
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.2.1"
+_VERSION="1.2.2"
 _PACKAGE="run-eslint"
 _DETAILS="Run ESLint analysis tool."
 
@@ -32,7 +32,7 @@ if [ -z "$STAGED_FILES" ]; then
 fi
 
 ESLINT_TARGET=(".")
-if ! $FORCE_ALL ; then
+if [[ "$FORCE_ALL" != true ]] ; then
     readarray -t ESLINT_TARGET <<< "$STAGED_FILES"
 fi
 
@@ -61,7 +61,7 @@ ROOT=$(basename "$(pwd)")
 CLEAN_OUTPUT=""
 while IFS= read -r FILE; do
     CLEAN_PATH=$(flycheck_to_unix_relative "$ROOT" "$FILE")
-    if $FORCE_ALL || [[ ! "$FILE" =~ ^[A-Za-z]:\\.*:0:0: ]]; then
+    if [[ "$FORCE_ALL" == true ]] || [[ ! "$FILE" =~ ^[A-Za-z]:\\.*:0:0: ]]; then
         CLEAN_OUTPUT="$CLEAN_OUTPUT"$'\n'"$CLEAN_PATH"
     fi
 done <<< "$OUTPUT"
