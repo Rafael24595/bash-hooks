@@ -1,6 +1,6 @@
 #!/bin/bash
 
-_VERSION="1.0.1"
+_VERSION="1.0.2"
 _PACKAGE="run-coverage-black-box"
 _DETAILS="Runs black-box tests on Go packages and calculates code coverage. By default, it checks whether the test directory structure matches the source structure and verifies if the current test coverage meets or exceeds the specified minimum."
 
@@ -21,13 +21,13 @@ PACKAGE_LIST=()
 
 for FLAG in "$@"; do
     case "$FLAG" in
-        --verbose | -v)
+        --verbose | --v)
             VERBOSE=true
             ;;
-        --success-empty | -se)
+        --success-empty | --se)
             SUCCESS_EMPTY=true
             ;;
-        --invalid-empty | -ie)
+        --invalid-empty | --ie)
             INVALID_EMPTY=true
             ;;
         --package=*)
