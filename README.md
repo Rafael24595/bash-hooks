@@ -194,13 +194,37 @@ If none of `--project`, `--staged` or `--install` is selected, all checks are ex
 
 #### `run-fieldalignment.sh`
 
-Runs the `fieldalignment` tool to analyze Go struct memory layout and detect potential memory savings.
+Runs `fieldalignment` on each selected Go module and fails if a staged struct wastes too much memory because of the order of its fields.
 
 **Flags**
 
 | Flag | Description |
 |---|---|
-| `--percent`, `--p` | Defines the minimum percentage of memory savings required for the check to fail. Default: `25%`. |
+| `--verbose`, `--v` | Shows the full output of `fieldalignment` for each module. By default only the summary is shown. |
+| `--percent=<n>`, `--p=<n>` | Defines the waste, as a percentage of the memory allocated for the struct, from which a struct fails the check. Accepts integers between `0` and `100`. Default: `25`. |
+| `--module=<path>`, `--m=<path>` | Checks the given modules. See [Go modules](#go-modules). |
+| `--discover`, `--d` | Checks every module of the repository. See [Go modules](#go-modules). |
+
+**Modules and summary**
+
+`fieldalignment` runs on the whole module, from the module's directory, even when a previous one fails. If no file is staged, the script exits without running it. Only the findings in staged files are checked:
+
+- **Size findings** fail when their waste reaches `--percent`. The waste is the one computed by `fieldalignment`, which accounts for the allocator size classes: a struct that could be smaller but would still be allocated the same memory wastes nothing and never fails.
+- **Pointer findings** (`leading bytes of pointer data`) only reduce the work of the garbage collector; they are counted but do not fail the check.
+
+After the last module, a summary lists every module with:
+
+- **Structs**: the staged structs whose waste reaches `--percent`.
+- **Below**: the staged structs with some waste under `--percent`, or none once allocated.
+- **Pointers**: the staged structs with a pointer finding.
+- **Unstaged**: the findings in files that are not staged, which are not checked.
+- **Result**: passed, structs over the threshold, or `fieldalignment` failed (an exit code other than `0` or `3`, such as a package that does not build), followed by the findings and the last lines of the output of those that failed.
+
+The script exits with code `1` when any module failed.
+
+**Dependencies**
+
+- `fieldalignment` ([golang.org/x/tools](https://pkg.go.dev/golang.org/x/tools/go/analysis/passes/fieldalignment))
 
 #### `run-formatter.sh`
 
@@ -214,6 +238,7 @@ Runs `golangci-lint` in every selected module and reports the issues of the stag
 
 | Flag | Description |
 |---|---|
+| `--verbose`, `--v` | Shows the full output of `golangci-lint` for each module. By default only the summary is shown. |
 | `--install`, `--i` | Installs the latest version of `golangci-lint` if it is not already installed. |
 | `--strict`, `--s` | Enables strict mode: any issue fails the check, whether its file is staged or not. |
 | `--enable=<lnt>`, `--e=<lnt>` | Enables a specific linter. Can be specified multiple times. Linters are combined into a comma-separated list. |
@@ -222,7 +247,7 @@ Runs `golangci-lint` in every selected module and reports the issues of the stag
 
 **Staged files and summary**
 
-`golangci-lint` runs on the whole module, from the module's directory, and its output is shown in full. Only the issues of staged files fail the check, unless `--strict` is set; the paths are reported relative to the repository root, as Git writes them.
+`golangci-lint` runs on the whole module, from the module's directory; its output is shown only with `--verbose`. Only the issues of staged files fail the check, unless `--strict` is set; the paths are reported relative to the repository root, as Git writes them.
 
 After the last module, a summary lists every module with:
 
@@ -245,6 +270,7 @@ Runs Go tests across the main build configuration and any additional build varia
 
 | Flag | Description |
 |---|---|
+| `--verbose`, `--v` | Shows the output of `go test` for every run. By default it is shown only for the runs that fail. This is unrelated to `go test -v`, which the script always uses to count the tests. |
 | `--tags=<tag>`, `--t=<tag>` | Defines the build tags for the main test flow. Can be specified multiple times. Tags are combined into a comma-separated list. |
 | `--variant-tags=<tag>`, `--vt=<tag>` | Defines an additional build variant. Each occurrence creates an independent test flow using the specified build tags. Can be specified multiple times. |
 | `--race`, `--r` | Runs tests using the Go race detector. |
@@ -261,7 +287,7 @@ Variant tags replace the main flow tags rather than being combined with them. Al
 
 **Modules and summary**
 
-Every flow runs in every module, from the module's directory: with two modules and three flows, the tests run six times. All runs are executed even when one fails, and coverage and its threshold apply to each run on its own.
+Every flow runs in every module, from the module's directory: with two modules and three flows, the tests run six times. All runs are executed even when one fails, and coverage and its threshold apply to each run on its own. The output of `go test` is shown for the runs that fail, or for all of them with `--verbose`.
 
 After the last run, a summary lists every run with its tests, coverage and result, followed by the details of those that failed:
 
@@ -299,6 +325,7 @@ Runs `govulncheck` on each selected Go module to check its dependencies for know
 
 | Flag | Description |
 |---|---|
+| `--verbose`, `--v` | Shows the full output of `govulncheck` for each module. By default only the summary is shown. |
 | `--install`, `--i` | Installs the latest version of `govulncheck` if it is not already installed. |
 | `--module=<path>`, `--m=<path>` | Scans the given modules. See [Go modules](#go-modules). |
 | `--discover`, `--d` | Scans every module of the repository. See [Go modules](#go-modules). |
@@ -313,7 +340,7 @@ Every module is scanned with `govulncheck -show verbose`, from the module's dire
 | `Imported` | A vulnerable package is imported, but none of its vulnerable symbols are called. | No |
 | `Required` | A vulnerable module is required, but none of its vulnerable packages are imported. | No |
 
-A module fails when `govulncheck` exits with code `3` (your code calls a vulnerability) or with any code other than `0` (the scan itself failed). After the summary, the failures list the called vulnerabilities of each affected module without their call traces, which are printed in full above, or the last lines of the output when the scan failed.
+A module fails when `govulncheck` exits with code `3` (your code calls a vulnerability) or with any code other than `0` (the scan itself failed). After the summary, the failures list the called vulnerabilities of each affected module without their call traces (shown with `--verbose`), or the last lines of the output when the scan failed.
 
 The script exits with code `1` when any module failed.
 
