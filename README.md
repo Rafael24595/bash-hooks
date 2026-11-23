@@ -238,12 +238,12 @@ Runs `golangci-lint` in every selected module and reports the issues of the stag
 
 | Flag | Description |
 |---|---|
+| `--verbose`, `--v` | Shows the full output of `golangci-lint` for each module. By default only the summary is shown. |
 | `--install`, `--i` | Installs the latest version of `golangci-lint` if it is not already installed. |
 | `--strict`, `--s` | Enables strict mode: any issue fails the check, whether its file is staged or not. |
 | `--enable=<lnt>`, `--e=<lnt>` | Enables a specific linter. Can be specified multiple times. Linters are combined into a comma-separated list. |
 | `--module=<path>`, `--m=<path>` | Lints the given modules. See [Go modules](#go-modules). |
 | `--discover`, `--d` | Lints every module of the repository. See [Go modules](#go-modules). |
-| `--verbose`, `--v` | Shows the full output of `golangci-lint` for each module. By default only the summary is shown. |
 
 **Staged files and summary**
 
@@ -270,6 +270,7 @@ Runs Go tests across the main build configuration and any additional build varia
 
 | Flag | Description |
 |---|---|
+| `--verbose`, `--v` | Shows the output of `go test` for every run. By default it is shown only for the runs that fail. This is unrelated to `go test -v`, which the script always uses to count the tests. |
 | `--tags=<tag>`, `--t=<tag>` | Defines the build tags for the main test flow. Can be specified multiple times. Tags are combined into a comma-separated list. |
 | `--variant-tags=<tag>`, `--vt=<tag>` | Defines an additional build variant. Each occurrence creates an independent test flow using the specified build tags. Can be specified multiple times. |
 | `--race`, `--r` | Runs tests using the Go race detector. |
@@ -277,7 +278,6 @@ Runs Go tests across the main build configuration and any additional build varia
 | `--cover=<threshold>`, `--c=<threshold>` | Enables code coverage reporting and defines the minimum required coverage percentage. The check fails if coverage falls below the specified threshold. Accepts values between `0` and `100`. |
 | `--module=<path>`, `--m=<path>` | Runs the tests of the given modules. See [Go modules](#go-modules). |
 | `--discover`, `--d` | Runs the tests of every module of the repository. See [Go modules](#go-modules). |
-| `--verbose`, `--v` | Shows the output of `go test` for every run. By default it is shown only for the runs that fail. This is unrelated to `go test -v`, which the script always uses to count the tests. |
 
 **Build variants**
 
@@ -325,10 +325,10 @@ Runs `govulncheck` on each selected Go module to check its dependencies for know
 
 | Flag | Description |
 |---|---|
+| `--verbose`, `--v` | Shows the full output of `govulncheck` for each module. By default only the summary is shown. |
 | `--install`, `--i` | Installs the latest version of `govulncheck` if it is not already installed. |
 | `--module=<path>`, `--m=<path>` | Scans the given modules. See [Go modules](#go-modules). |
 | `--discover`, `--d` | Scans every module of the repository. See [Go modules](#go-modules). |
-| `--verbose`, `--v` | Shows the full output of `govulncheck` for each module. By default only the summary is shown. |
 
 **Modules and summary**
 
