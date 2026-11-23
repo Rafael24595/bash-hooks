@@ -194,13 +194,37 @@ If none of `--project`, `--staged` or `--install` is selected, all checks are ex
 
 #### `run-fieldalignment.sh`
 
-Runs the `fieldalignment` tool to analyze Go struct memory layout and detect potential memory savings.
+Runs `fieldalignment` on each selected Go module and fails if a staged struct wastes too much memory because of the order of its fields.
 
 **Flags**
 
 | Flag | Description |
 |---|---|
-| `--percent`, `--p` | Defines the minimum percentage of memory savings required for the check to fail. Default: `25%`. |
+| `--verbose`, `--v` | Shows the full output of `fieldalignment` for each module. By default only the summary is shown. |
+| `--percent=<n>`, `--p=<n>` | Defines the waste, as a percentage of the memory allocated for the struct, from which a struct fails the check. Accepts integers between `0` and `100`. Default: `25`. |
+| `--module=<path>`, `--m=<path>` | Checks the given modules. See [Go modules](#go-modules). |
+| `--discover`, `--d` | Checks every module of the repository. See [Go modules](#go-modules). |
+
+**Modules and summary**
+
+`fieldalignment` runs on the whole module, from the module's directory, even when a previous one fails. If no file is staged, the script exits without running it. Only the findings in staged files are checked:
+
+- **Size findings** fail when their waste reaches `--percent`. The waste is the one computed by `fieldalignment`, which accounts for the allocator size classes: a struct that could be smaller but would still be allocated the same memory wastes nothing and never fails.
+- **Pointer findings** (`leading bytes of pointer data`) only reduce the work of the garbage collector; they are counted but do not fail the check.
+
+After the last module, a summary lists every module with:
+
+- **Structs**: the staged structs whose waste reaches `--percent`.
+- **Below**: the staged structs with some waste under `--percent`, or none once allocated.
+- **Pointers**: the staged structs with a pointer finding.
+- **Unstaged**: the findings in files that are not staged, which are not checked.
+- **Result**: passed, structs over the threshold, or `fieldalignment` failed (an exit code other than `0` or `3`, such as a package that does not build), followed by the findings and the last lines of the output of those that failed.
+
+The script exits with code `1` when any module failed.
+
+**Dependencies**
+
+- `fieldalignment` ([golang.org/x/tools](https://pkg.go.dev/golang.org/x/tools/go/analysis/passes/fieldalignment))
 
 #### `run-formatter.sh`
 
