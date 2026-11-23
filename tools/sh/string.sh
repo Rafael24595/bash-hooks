@@ -74,5 +74,5 @@ indent() {
 
     while IFS= read -r LINE; do
         printf '%s%s\n' "$PREFIX" "$LINE"
-    done <<< "$2"
+    done <<< "${2%$'\n'}"
 }
