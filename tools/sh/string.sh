@@ -68,6 +68,10 @@ indent() {
     local PREFIX=$1
     local LINE
 
+    if [[ -z "$2" ]]; then
+        return
+    fi
+
     while IFS= read -r LINE; do
         printf '%s%s\n' "$PREFIX" "$LINE"
     done <<< "$2"
