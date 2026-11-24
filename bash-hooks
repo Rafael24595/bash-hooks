@@ -83,19 +83,28 @@ clean_output() {
 print_help() {
     echo -e "\nUsage:"
     echo -e "  $INSTALLER_NAME [flags]"
+
     echo -e "\nFlags:"
-    echo -e "  -h --help                   $YELLOW Help command. $RESET"
-    echo -e "  -v --version                $YELLOW Shows actual installer version. $RESET"
-    echo -e "  -u --update=tag             $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
-    echo -e "  -t --test                   $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
-    echo -e "  -d --disable=pkg            $YELLOW Disables the given packages, or the whole hook if none is given. If the hook does not exist, it is created disabled. $RESET"
-    echo -e "  -e --enable=pkg             $YELLOW Enables the given packages, or the whole hook if none is given. If the hook does not exist, it is created enabled. $RESET"
-    echo -e "     --workspace=path         $YELLOW Defines the workspace where the script will be placed. $RESET"
-    echo -e "     --input=path             $YELLOW Defines the directory and name where the input file is located. $RESET"
-    echo -e "     --output=path            $YELLOW Defines directory and name where the script will be placed. $RESET"
-    echo -e "  -b --block                  $YELLOW Generates the script as a single file without imports. $RESET"
-    echo -e "     --mode=type              $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
-    echo -e "     --pull=target/file:tag   $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
+
+    echo -e "  System flags:"
+    echo -e "   -h --help                   $YELLOW Help command. $RESET"
+    echo -e "   -v --version                $YELLOW Shows actual installer version. $RESET"
+    echo -e "   -u --update[=<tag>]         $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
+
+    echo -e "\n  Build flags:"
+    echo -e "      --mode=<type>            $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
+    echo -e "      --workspace=<path>       $YELLOW Defines the workspace where the script will be placed. $RESET"
+    echo -e "      --input=<path>           $YELLOW Defines the directory and name where the input file is located. $RESET"
+    echo -e "      --output=<path>          $YELLOW Defines directory and name where the script will be placed. $RESET"
+    echo -e "   -b --block                  $YELLOW Generates the script as a single file without imports. $RESET"
+    echo -e "   -t --test                   $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
+
+    echo -e "\n  Package flags:"
+    echo -e "   -d --disable[=<pkg>]        $YELLOW Disables the given packages, or the whole hook if none is given. If the hook does not exist, it is created disabled. $RESET"
+    echo -e "   -e --enable[=<pkg>]         $YELLOW Enables the given packages, or the whole hook if none is given. If the hook does not exist, it is created enabled. $RESET"
+
+    echo -e "\n  Remote flags:"
+    echo -e "     --pull=<target/file:tag>  $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
     echo ""
 }
 
@@ -119,6 +128,22 @@ execution_resume() {
 
 for ARG in "$@"; do
   case "$ARG" in
+    --help | -h)
+      print_help
+      exit 0
+      ;;
+    --version | -v)
+      echo "$INSTALLER_NAME version $_VERSION ($_REPOSITORY)"
+      exit 0
+      ;;
+    --update=* | -u=*)
+      SOURCE_UPDATE_VERSION="${ARG#*=}"
+      EXECUTE_UPDATE=true
+      ;;
+    --update | -u)
+      EXECUTE_UPDATE=true
+      ;;
+    
     --mode=*)
       ARG="${ARG#--mode=}"
       case "$ARG" in
@@ -135,10 +160,6 @@ for ARG in "$@"; do
       esac
       OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
       ;;
-    --test | -t)
-      OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.${HOOK_MODE}"
-      IS_TEST=true
-      ;;
     --workspace=*)
       WORKSPACE="${ARG#*=}"
       ;;
@@ -151,22 +172,11 @@ for ARG in "$@"; do
     --block | -b)
       IS_BLOCK=true
       ;;
-    --pull=*)
-      EXECUTE_PULL=true
-      SOURCE_PULL_PACKAGE="${ARG#--pull=}"
-      REMOTE_LOCATION="."
+    --test | -t)
+      OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.${HOOK_MODE}"
+      IS_TEST=true
       ;;
-    --version | -v)
-      echo "$INSTALLER_NAME version $_VERSION ($_REPOSITORY)"
-      exit 0
-      ;;
-    --update=*)
-      SOURCE_UPDATE_VERSION="${ARG#*=}"
-      EXECUTE_UPDATE=true
-      ;;
-    --update | -u)
-      EXECUTE_UPDATE=true
-      ;;
+    
     --enable | -e)
       DISABLE_HOOK_STATUS=0
       ;;
@@ -183,9 +193,11 @@ for ARG in "$@"; do
       IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
       HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
       ;;
-    --help | -h)
-      print_help
-      exit 0
+    
+    --pull=*)
+      EXECUTE_PULL=true
+      SOURCE_PULL_PACKAGE="${ARG#--pull=}"
+      REMOTE_LOCATION="."
       ;;
     *)
       echo -e "${RED}\nError: unknown option: $ARG${RESET}"
