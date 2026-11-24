@@ -760,12 +760,12 @@ chmod +x "$OUTPUT_FILE"
 # BUILDING PROCCESS #
 # ----------------- #
 
-if $EXECUTE_UPDATE; then
+if [[ "$EXECUTE_UPDATE" == true ]]; then
     update_installer "$SOURCE_UPDATE_VERSION"
     exit 0
 fi
 
-if $EXECUTE_PULL; then
+if [[ "$EXECUTE_PULL" == true ]]; then
     pull_source "$SOURCE_PULL_PACKAGE"
 
     echo -e "\n${BOLD}The package has been downloaded successfully.${RESET}\n"
@@ -783,7 +783,7 @@ fi
 
 clean_output "$OUTPUT_FILE"
 
-if [ "$IS_TEST" = true ]; then
+if [[ "$IS_TEST" == true ]]; then
     echo -e "\n${YELLOW}${BOLD}Executing in test mode, script will be mounted in '${RESET}${GREEN}${BOLD}${OUTPUT_FILE}${RESET}${YELLOW}${BOLD}'.${RESET}"
 fi
 
