@@ -1,7 +1,9 @@
 #!/bin/bash
 
-_VERSION="0.18.0"
+_VERSION="0.19.0"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
+
+_REMOTE_DATA="https://raw.githubusercontent.com/Rafael24595/bash-hooks/refs/heads/main/project.toml"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -64,6 +66,9 @@ DISABLE_HOOK_STATUS=-1
 DISABLE_HOOK=false
 HOOKS_TO_UPDATE=()
 
+EXECUTE_SYNC=false
+SYNC_TAG=""
+
 # -------------- #
 # MISC FUNCTIONS #
 # -------------- #
@@ -83,19 +88,29 @@ clean_output() {
 print_help() {
     echo -e "\nUsage:"
     echo -e "  $INSTALLER_NAME [flags]"
+
     echo -e "\nFlags:"
-    echo -e "  -h --help                   $YELLOW Help command. $RESET"
-    echo -e "  -v --version                $YELLOW Shows actual installer version. $RESET"
-    echo -e "  -u --update=tag             $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
-    echo -e "  -t                          $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
-    echo -e "  -d                          $YELLOW Disables the hook if exists otherwise creates it disabled. $RESET"
-    echo -e "  -e                          $YELLOW Enables the hook if exists otherwise creates it enabled. $RESET"
-    echo -e "     --workspace=path         $YELLOW Defines the workspace where the script will be placed. $RESET"
-    echo -e "     --input=path             $YELLOW Defines the directory and name where the input file is located. $RESET"
-    echo -e "     --output=path            $YELLOW Defines directory and name where the script will be placed. $RESET"
-    echo -e "     --block=b                $YELLOW Generates the script as a single file without imports. $RESET"
-    echo -e "     --mode=type              $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
-    echo -e "     --pull=target/file:tag   $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
+
+    echo -e "  System flags:"
+    echo -e "   -h --help                   $YELLOW Help command. $RESET"
+    echo -e "   -v --version                $YELLOW Shows actual installer version. $RESET"
+    echo -e "   -u --update[=<tag>]         $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
+
+    echo -e "\n  Build flags:"
+    echo -e "      --mode=<type>            $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
+    echo -e "      --workspace=<path>       $YELLOW Defines the workspace where the script will be placed. $RESET"
+    echo -e "      --input=<path>           $YELLOW Defines the directory and name where the input file is located. $RESET"
+    echo -e "      --output=<path>          $YELLOW Defines directory and name where the script will be placed. $RESET"
+    echo -e "   -b --block                  $YELLOW Generates the script as a single file without imports. $RESET"
+    echo -e "   -t --test                   $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
+
+    echo -e "\n  Package flags:"
+    echo -e "   -d --disable[=<pkg>]        $YELLOW Disables the given packages, or the whole hook if none is given. If the hook does not exist, it is created disabled. $RESET"
+    echo -e "   -e --enable[=<pkg>]         $YELLOW Enables the given packages, or the whole hook if none is given. If the hook does not exist, it is created enabled. $RESET"
+
+    echo -e "\n  Remote flags:"
+    echo -e "     --pull=<target/file:tag>  $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
+    echo -e "     --sync[=<tag>]            $YELLOW Sets the tag of every bash-hooks remote script in the input file to the given version. If a version is not specified, the latest version is used. $RESET"
     echo ""
 }
 
@@ -119,6 +134,22 @@ execution_resume() {
 
 for ARG in "$@"; do
   case "$ARG" in
+    --help | -h)
+      print_help
+      exit 0
+      ;;
+    --version | -v)
+      echo "$INSTALLER_NAME version $_VERSION ($_REPOSITORY)"
+      exit 0
+      ;;
+    --update=* | -u=*)
+      SOURCE_UPDATE_VERSION="${ARG#*=}"
+      EXECUTE_UPDATE=true
+      ;;
+    --update | -u)
+      EXECUTE_UPDATE=true
+      ;;
+    
     --mode=*)
       ARG="${ARG#--mode=}"
       case "$ARG" in
@@ -135,10 +166,6 @@ for ARG in "$@"; do
       esac
       OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
       ;;
-    -t)
-      OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.${HOOK_MODE}"
-      IS_TEST=true
-      ;;
     --workspace=*)
       WORKSPACE="${ARG#*=}"
       ;;
@@ -151,22 +178,11 @@ for ARG in "$@"; do
     --block | -b)
       IS_BLOCK=true
       ;;
-    --pull=*)
-      EXECUTE_PULL=true
-      SOURCE_PULL_PACKAGE="${ARG#--pull=}"
-      REMOTE_LOCATION="."
+    --test | -t)
+      OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.${HOOK_MODE}"
+      IS_TEST=true
       ;;
-    --version | -v)
-      echo "$INSTALLER_NAME version $_VERSION ($_REPOSITORY)"
-      exit 0
-      ;;
-    --update=*)
-      SOURCE_UPDATE_VERSION="${ARG#*=}"
-      EXECUTE_UPDATE=true
-      ;;
-    --update | -u)
-      EXECUTE_UPDATE=true
-      ;;
+    
     --enable | -e)
       DISABLE_HOOK_STATUS=0
       ;;
@@ -183,9 +199,18 @@ for ARG in "$@"; do
       IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
       HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
       ;;
-    --help | -h)
-      print_help
-      exit 0
+    
+    --pull=*)
+      EXECUTE_PULL=true
+      SOURCE_PULL_PACKAGE="${ARG#--pull=}"
+      REMOTE_LOCATION="."
+      ;;
+    --sync)
+      EXECUTE_SYNC=true
+      ;;
+    --sync=*)
+      EXECUTE_SYNC=true
+      SYNC_TAG="${ARG#*=}"
       ;;
     *)
       echo -e "${RED}\nError: unknown option: $ARG${RESET}"
@@ -212,6 +237,29 @@ OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
 # --------- #
 # FUNCTIONS #
 # --------- #
+
+sync_config_tags() {
+    local PROJECT_VERSION="$1"
+
+    echo -e "${BOLD}\nSyncing tags...${RESET}"
+
+    if [ -z "$PROJECT_VERSION" ]; then
+        echo -e "${BOLD}\nFetching project version from remote...\n${RESET}"
+        echo -e "${YELLOW} - Remote source: $_REMOTE_DATA${RESET}"
+
+        if ! CONTENT=$(curl -sf "$_REMOTE_DATA") ; then
+            exit_error "Failed to retrieve script from GitHub."
+        fi
+
+        PROJECT_VERSION=$(grep -A 5 '^\[project\]' <<< "$CONTENT" | grep '^version' | head -n 1 | cut -d'"' -f2)
+    fi
+
+    echo -e "${YELLOW} - Detected version: $PROJECT_VERSION${RESET}"
+
+    sed -i "/origin: https:\/\/github.com\/Rafael24595\/bash-hooks/{n; s/tag: .*/tag: $PROJECT_VERSION/}" "$INPUT_FILE"
+
+    echo -e "${GREEN}\nTags updated to $PROJECT_VERSION in $INPUT_FILE.${RESET}\n"
+}
 
 format_hook_name() {
     local SCRIPT_ID="$1"
@@ -741,6 +789,14 @@ pull_source() {
     fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME" 0
 }
 
+# ----------- #
+# CONFIG FILE #
+# ----------- #
+
+if [[ "$EXECUTE_SYNC" == true ]]; then
+    sync_config_tags "$SYNC_TAG"
+    exit 0
+fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 touch "$OUTPUT_FILE"
@@ -760,12 +816,12 @@ chmod +x "$OUTPUT_FILE"
 # BUILDING PROCCESS #
 # ----------------- #
 
-if $EXECUTE_UPDATE; then
+if [[ "$EXECUTE_UPDATE" == true ]]; then
     update_installer "$SOURCE_UPDATE_VERSION"
     exit 0
 fi
 
-if $EXECUTE_PULL; then
+if [[ "$EXECUTE_PULL" == true ]]; then
     pull_source "$SOURCE_PULL_PACKAGE"
 
     echo -e "\n${BOLD}The package has been downloaded successfully.${RESET}\n"
@@ -783,7 +839,7 @@ fi
 
 clean_output "$OUTPUT_FILE"
 
-if [ "$IS_TEST" = true ]; then
+if [[ "$IS_TEST" == true ]]; then
     echo -e "\n${YELLOW}${BOLD}Executing in test mode, script will be mounted in '${RESET}${GREEN}${BOLD}${OUTPUT_FILE}${RESET}${YELLOW}${BOLD}'.${RESET}"
 fi
 
