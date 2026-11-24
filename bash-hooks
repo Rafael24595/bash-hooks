@@ -93,7 +93,7 @@ print_help() {
     echo -e "     --workspace=path         $YELLOW Defines the workspace where the script will be placed. $RESET"
     echo -e "     --input=path             $YELLOW Defines the directory and name where the input file is located. $RESET"
     echo -e "     --output=path            $YELLOW Defines directory and name where the script will be placed. $RESET"
-    echo -e "     --block=b                $YELLOW Generates the script as a single file without imports. $RESET"
+    echo -e "     --block                  $YELLOW Generates the script as a single file without imports. $RESET"
     echo -e "     --mode=type              $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
     echo -e "     --pull=target/file:tag   $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
     echo ""
