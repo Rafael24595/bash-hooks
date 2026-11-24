@@ -1,7 +1,9 @@
 #!/bin/bash
 
-_VERSION="0.18.0"
+_VERSION="0.19.0"
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
+
+_REMOTE_DATA="https://raw.githubusercontent.com/Rafael24595/bash-hooks/refs/heads/main/project.toml"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -64,6 +66,9 @@ DISABLE_HOOK_STATUS=-1
 DISABLE_HOOK=false
 HOOKS_TO_UPDATE=()
 
+EXECUTE_SYNC=false
+SYNC_TAG=""
+
 # -------------- #
 # MISC FUNCTIONS #
 # -------------- #
@@ -105,6 +110,7 @@ print_help() {
 
     echo -e "\n  Remote flags:"
     echo -e "     --pull=<target/file:tag>  $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
+    echo -e "     --sync[=<tag>]            $YELLOW Sets the tag of every bash-hooks remote script in the input file to the given version. If a version is not specified, the latest version is used. $RESET"
     echo ""
 }
 
@@ -199,6 +205,13 @@ for ARG in "$@"; do
       SOURCE_PULL_PACKAGE="${ARG#--pull=}"
       REMOTE_LOCATION="."
       ;;
+    --sync)
+      EXECUTE_SYNC=true
+      ;;
+    --sync=*)
+      EXECUTE_SYNC=true
+      SYNC_TAG="${ARG#*=}"
+      ;;
     *)
       echo -e "${RED}\nError: unknown option: $ARG${RESET}"
       exit 2
@@ -224,6 +237,29 @@ OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
 # --------- #
 # FUNCTIONS #
 # --------- #
+
+sync_config_tags() {
+    local PROJECT_VERSION="$1"
+
+    echo -e "${BOLD}\nSyncing tags...${RESET}"
+
+    if [ -z "$PROJECT_VERSION" ]; then
+        echo -e "${BOLD}\nFetching project version from remote...\n${RESET}"
+        echo -e "${YELLOW} - Remote source: $_REMOTE_DATA${RESET}"
+
+        if ! CONTENT=$(curl -sf "$_REMOTE_DATA") ; then
+            exit_error "Failed to retrieve script from GitHub."
+        fi
+
+        PROJECT_VERSION=$(grep -A 5 '^\[project\]' <<< "$CONTENT" | grep '^version' | head -n 1 | cut -d'"' -f2)
+    fi
+
+    echo -e "${YELLOW} - Detected version: $PROJECT_VERSION${RESET}"
+
+    sed -i "/origin: https:\/\/github.com\/Rafael24595\/bash-hooks/{n; s/tag: .*/tag: $PROJECT_VERSION/}" "$INPUT_FILE"
+
+    echo -e "${GREEN}\nTags updated to $PROJECT_VERSION in $INPUT_FILE.${RESET}\n"
+}
 
 format_hook_name() {
     local SCRIPT_ID="$1"
@@ -753,6 +789,14 @@ pull_source() {
     fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME" 0
 }
 
+# ----------- #
+# CONFIG FILE #
+# ----------- #
+
+if [[ "$EXECUTE_SYNC" == true ]]; then
+    sync_config_tags "$SYNC_TAG"
+    exit 0
+fi
 
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 touch "$OUTPUT_FILE"

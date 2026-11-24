@@ -151,6 +151,7 @@ By default, the `bash-hooks`script is located in the same workspace as the insta
 | Option | Description |
 | --- | --- |
 | `--pull=<script>:<tag>` | Downloads a remote script at the specified version. |
+| `--sync[=<tag>]` | Sets the tag of every `bash-hooks` remote script in the input file to the specified version, or to the latest version if no tag is provided. The input file is the one selected by `--workspace` and `--input`. |
 
 Examples:
 
@@ -174,6 +175,12 @@ Examples:
 
 # Download a specific remote script version
 ./bash-hooks --pull=golang/sh/run-govulncheck.sh:0.6.3
+
+# Point every bash-hooks remote script to a version
+./bash-hooks --sync=0.23.0
+
+# Point every bash-hooks remote script to the latest version
+./bash-hooks --sync
 ```
 
 ## Package Reference
