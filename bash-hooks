@@ -87,13 +87,13 @@ print_help() {
     echo -e "  -h --help                   $YELLOW Help command. $RESET"
     echo -e "  -v --version                $YELLOW Shows actual installer version. $RESET"
     echo -e "  -u --update=tag             $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
-    echo -e "  -t                          $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
+    echo -e "  -t --test                   $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
     echo -e "  -d --disable=pkg            $YELLOW Disables the given packages, or the whole hook if none is given. If the hook does not exist, it is created disabled. $RESET"
     echo -e "  -e --enable=pkg             $YELLOW Enables the given packages, or the whole hook if none is given. If the hook does not exist, it is created enabled. $RESET"
     echo -e "     --workspace=path         $YELLOW Defines the workspace where the script will be placed. $RESET"
     echo -e "     --input=path             $YELLOW Defines the directory and name where the input file is located. $RESET"
     echo -e "     --output=path            $YELLOW Defines directory and name where the script will be placed. $RESET"
-    echo -e "     --block                  $YELLOW Generates the script as a single file without imports. $RESET"
+    echo -e "  -b --block                  $YELLOW Generates the script as a single file without imports. $RESET"
     echo -e "     --mode=type              $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
     echo -e "     --pull=target/file:tag   $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
     echo ""
@@ -135,7 +135,7 @@ for ARG in "$@"; do
       esac
       OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
       ;;
-    -t)
+    --test | -t)
       OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.${HOOK_MODE}"
       IS_TEST=true
       ;;
