@@ -1,8 +1,9 @@
 #!/bin/bash
 
 _VERSION="0.20.0"
-_REPOSITORY="https://github.com/Rafael24595/bash-hooks"
+_PROJECT_VERSION="0.20.0"
 
+_REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 _REMOTE_DATA="https://raw.githubusercontent.com/Rafael24595/bash-hooks/refs/heads/main/project.toml"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -99,8 +100,8 @@ print_help() {
 
     echo -e "  System flags:"
     echo -e "   -h --help                    $YELLOW Help command. $RESET"
-    echo -e "   -v --version                 $YELLOW Shows actual installer version. $RESET"
-    echo -e "   -u --update[=<project-tag>]  $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
+    echo -e "   -v --version                 $YELLOW Shows the installer version and the project release it belongs to. $RESET"
+    echo -e "   -u --update[=<project-tag>]  $YELLOW Updates the installer from the given project release (see --version). Without a tag, it is updated from the main branch. $RESET"
 
     echo -e "\n  Build flags:"
     echo -e "      --mode=<type>             $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
@@ -163,7 +164,8 @@ parse_arguments() {
             exit 0
             ;;
         --version | -v)
-            echo "$INSTALLER_NAME version $_VERSION ($_REPOSITORY)"
+            echo "$INSTALLER_NAME $_VERSION (project $_PROJECT_VERSION)"
+            echo "$_REPOSITORY"
             exit 0
             ;;
         --update=* | -u=*)
