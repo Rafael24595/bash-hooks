@@ -1,7 +1,7 @@
 #!/bin/bash
 
 _VERSION="0.20.0"
-_PROJECT_VERSION="0.20.0"
+_PROJECT_VERSION="0.25.0"
 
 _REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 _REMOTE_DATA="https://raw.githubusercontent.com/Rafael24595/bash-hooks/refs/heads/main/project.toml"
