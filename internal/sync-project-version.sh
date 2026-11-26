@@ -9,7 +9,7 @@ _DETAILS="Sync project version in bash-hooks with the version in project.toml."
 source ./scripts/colors.sh
 # Import sources from project.sh
 # shellcheck disable=SC1091
-source ./scripts/project.sh
+source ./internal/scripts/project.sh
 
 PROJECT_FILE="project.toml"
 BASH_HOOKS="bash-hooks"

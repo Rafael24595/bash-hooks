@@ -9,7 +9,7 @@ _DETAILS="Sync tags in pre-commit-build.template.yml with the version in project
 source ./scripts/colors.sh
 # Import sources from project.sh
 # shellcheck disable=SC1091
-source ./scripts/project.sh
+source ./internal/scripts/project.sh
 
 PROJECT_FILE="project.toml"
 TEMPLATE_FILE="pre-commit-build.template.yml"
