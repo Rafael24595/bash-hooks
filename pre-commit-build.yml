@@ -8,6 +8,6 @@ hooks:
       - id: run-linter
         path: ./sh/sh/run-linter.sh
       - id: sync-project-version
-        path: ./sources/sync-project-version.sh
+        path: ./internal/sync-project-version.sh
       - id: sync-temp-tags
-        path: ./sources/sync-temp-tags.sh
+        path: ./internal/sync-temp-tags.sh
