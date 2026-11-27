@@ -262,6 +262,133 @@ parse_arguments() {
     done
 }
 
+# ====== #
+# CONFIG #
+# ====== #
+
+declare -A CONFIG_LISTS=(
+    [local]="local_scripts"
+    [remote]="remote_repos"
+)
+
+declare -A CONFIG_INDEX
+
+config_validate() {
+    { yq eval '.' "$INPUT_FILE" > /dev/null; } 2>&1
+}
+
+config_load() {
+    local ASSIGNMENTS
+    if ! ASSIGNMENTS=$(yq -o=shell '{"cfg": .hooks}' "$INPUT_FILE" 2>&1); then
+        exit_error "Invalid YAML format: $ASSIGNMENTS"
+    fi
+
+    eval "$ASSIGNMENTS"
+
+    local LIST
+    local REF_LIST
+    local PREFIX
+    local REF_VAR
+
+    local I
+    local KEY
+
+    for LIST in "${!CONFIG_LISTS[@]}"; do
+        REF_LIST="${CONFIG_LISTS[$LIST]}"
+        PREFIX="cfg_${REF_LIST}"
+        
+        for (( I = 0; ; I++ )); do
+            REF_VAR="${PREFIX}_${I}_id"
+            if [[ ! -v $REF_VAR ]]; then
+                break
+            fi
+
+            KEY="$LIST.${!REF_VAR}"
+            CONFIG_INDEX[$KEY]=$I
+        done
+    done
+}
+
+config_ids() {
+    local LIST=$1
+
+    local REF_LIST="${CONFIG_LISTS[$LIST]}"
+    local PREFIX="cfg_${REF_LIST}"
+
+    local REF_VAR
+    local I
+
+    for (( I = 0; ; I++ )); do
+        REF_VAR="${PREFIX}_${I}_id"
+        if [[ ! -v $REF_VAR ]]; then
+            break
+        fi
+        
+        printf '%s\n' "${!REF_VAR}"
+    done
+}
+
+config_field() {
+    local LIST=$1
+    local ID=$2
+    local FIELD=$3
+
+    local REF_LIST="${CONFIG_LISTS[$LIST]}"
+
+    local KEY="${LIST}.${ID}"
+    local REF_INDEX="${CONFIG_INDEX[$KEY]-}"
+
+    local REF_VAR="cfg_${REF_LIST}_${REF_INDEX}_${FIELD}"
+    if [[ -n "${!REF_VAR-}" ]]; then
+        printf '%s\n' "${!REF_VAR}"
+    else
+        printf 'null\n'
+    fi
+}
+
+config_list_field() {
+    local LIST=$1
+    local ID=$2
+    local FIELD=$3
+
+    local REF_LIST="${CONFIG_LISTS[$LIST]}"
+
+    local KEY="${LIST}.${ID}"
+    local REF_INDEX="${CONFIG_INDEX[$KEY]-}"
+
+    local PREFIX="cfg_${REF_LIST}_${REF_INDEX}_${FIELD}"
+
+    local REF_VAR
+    local RESULT=""
+
+    local I
+
+    for (( I = 0; ; I++ )); do
+        REF_VAR="${PREFIX}_${I}"
+        if [[ ! -v $REF_VAR ]]; then
+            break
+        fi
+
+        RESULT+="${RESULT:+ }${!REF_VAR}"
+    done
+
+    printf '%s\n' "$RESULT"
+}
+
+config_sources() {
+    local REF_VAR
+    local I
+
+    for (( I = 0; ; I++ )); do
+        REF_VAR="cfg_local_sources_${I}_path"
+        if [[ ! -v $REF_VAR ]]; then
+            break
+        fi
+        
+        printf '%s\n' "${!REF_VAR}"
+    done
+}
+
 # ========== #
 # HOOK STATE #
 # ========== #
@@ -651,7 +778,7 @@ write_script_invocation() {
 load_sources() {
     echo -e "${YELLOW}\nLoading sources...${RESET}"
 
-    SOURCES=$(yq eval '.hooks.local.sources[].path' "${INPUT_FILE}")
+    SOURCES=$(config_sources)
     if [[ -z "$SOURCES" ]]; then
         echo -e "${GREEN}\nNo remote scripts found.${RESET}"
         return
@@ -682,23 +809,23 @@ load_remote_scripts() {
 
     echo -e "\n${YELLOW}Loading remote scipts...${RESET}"
 
-    REPO_IDS=$(yq eval '.hooks.remote.repos[].id' "${INPUT_FILE}")
+    REPO_IDS=$(config_ids remote)
     if [[ -z "$REPO_IDS" ]]; then
         echo -e "${GREEN}\nNo remote scripts found.${RESET}"
         return
     fi
 
     for REPO_ID in $REPO_IDS; do
-        NAME=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .name" "${INPUT_FILE}")
-        ORIGIN=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .origin" "${INPUT_FILE}")
-        TAG=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .tag" "${INPUT_FILE}")
-        TARGET=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .target" "${INPUT_FILE}")
+        NAME=$(config_field remote "$REPO_ID" name)
+        ORIGIN=$(config_field remote "$REPO_ID" origin)
+        TAG=$(config_field remote "$REPO_ID" tag)
+        TARGET=$(config_field remote "$REPO_ID" target)
         
-        EXPECT=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .expect" "${INPUT_FILE}")
-        RETURN=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .return" "${INPUT_FILE}")
+        EXPECT=$(config_field remote "$REPO_ID" expect)
+        RETURN=$(config_field remote "$REPO_ID" return)
 
-        ARGS=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
-        FLAGS=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .flags[]" "${INPUT_FILE}" | tr '\n' ' ')
+        ARGS=$(config_list_field remote "$REPO_ID" args)
+        FLAGS=$(config_list_field remote "$REPO_ID" flags)
 
         ARGUMENTS=$(format_arguments "$ARGS" "$FLAGS")
 
@@ -718,7 +845,7 @@ load_remote_scripts() {
 
         echo -e "\nReading ${BOLD}'${NAME}' script configuration${RESET}..."
 
-        DISABLED=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .disabled" "${INPUT_FILE}")
+        DISABLED=$(config_field remote "$SCRIPT_ID" disabled)
         if [[ "$DISABLED" == "true" ]]; then
             echo -e "${YELLOW}The script is flagged as disabled; skipping....${RESET}"
             COUNT_IGNORED=$((COUNT_IGNORED + 1))
@@ -761,15 +888,15 @@ load_local_scripts() {
 
     echo -e "${YELLOW}\nLoading local scipts...${RESET}"
 
-    SCRIPT_IDS=$(yq eval '.hooks.local.scripts[].id' "${INPUT_FILE}")
+    SCRIPT_IDS=$(config_ids local)
     if [[ -z "$SCRIPT_IDS" ]]; then
         echo -e "${GREEN}\nNo local scripts found.${RESET}"
         return
     fi
 
     for SCRIPT_ID in $SCRIPT_IDS; do
-        SCRIPT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .path" "${INPUT_FILE}")
-        INLINE=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .inline" "${INPUT_FILE}")
+        SCRIPT=$(config_field local "$SCRIPT_ID" path)
+        INLINE=$(config_field local "$SCRIPT_ID" inline)
 
         if [[ "$SCRIPT" != "null" && "$INLINE" != "null" ]]; then
             exit_error "Script '${SCRIPT_ID}' defines both 'path' and 'inline'."
@@ -779,17 +906,17 @@ load_local_scripts() {
             exit_error "Script '${SCRIPT_ID}' must define 'path' or 'inline'."
         fi
 
-        EXPECT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .expect" "${INPUT_FILE}")
-        RETURN=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .return" "${INPUT_FILE}")
+        EXPECT=$(config_field local "$SCRIPT_ID" expect)
+        RETURN=$(config_field local "$SCRIPT_ID" return)
 
-        ARGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
-        FLAGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .flags[]" "${INPUT_FILE}" | tr '\n' ' ')
+        ARGS=$(config_list_field local "$SCRIPT_ID" args)
+        FLAGS=$(config_list_field local "$SCRIPT_ID" flags)
 
         ARGUMENTS=$(format_arguments "$ARGS" "$FLAGS")
 
         echo -e "\nReading ${BOLD}'${SCRIPT_ID}' script${RESET}..."
 
-        DISABLED=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .disabled" "${INPUT_FILE}")
+        DISABLED=$(config_field local "$SCRIPT_ID" disabled)
         if [[ "$DISABLED" == "true" ]]; then
             echo -e "${YELLOW}The script is flagged as disabled; skipping...${RESET}"
             COUNT_IGNORED=$((COUNT_IGNORED + 1))
@@ -960,9 +1087,7 @@ action_status() {
 }
 
 action_build() {
-    if ! YAML_EVAL=$(yq eval '.' "$INPUT_FILE" 2>&1); then
-        exit_error "Invalid YAML format: $YAML_EVAL"
-    fi
+    config_load
 
     prepare_build_file
 
