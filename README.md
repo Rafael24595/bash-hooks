@@ -8,6 +8,7 @@
 - [Configuration](#configuration)
 - [Global Installation](#global-installation)
 - [CLI Reference](#cli-reference)
+- [Testing](#testing)
 - [Package Reference](#package-reference)
   - [Golang](#golang)
   - [Node.js](#nodejs)
@@ -32,9 +33,23 @@ Start from the [configuration template](https://github.com/Rafael24595/bash-hook
 
 ### Structure
 
+- `schema`: version of the configuration format. See [Schema version](#schema-version).
 - `hooks` (**required**)
   - `remote.repos`: list of remote script repositories.
   - `local.scripts`: list of local scripts.
+
+### Schema version
+
+`schema` declares which version of the configuration format the file uses, so that an installer can reject a file it does not understand instead of generating a broken hook. It is unrelated to the `tag` of remote scripts and to the project version.
+
+| Schema | Changes |
+| --- | --- |
+| `1` | Initial format. Used when `schema` is not specified. |
+| `2` | Adds [inline scripts](#inline-scripts). |
+
+`schema` must be an integer. If it is newer than the one supported by the installer, the build fails without changing the existing hook; run `bash-hooks --update` to get a newer installer.
+
+Installers released before the `schema` field ignore it, so they cannot reject newer files.
 
 ### Common script fields
 
@@ -60,11 +75,44 @@ These fields are used by remote and local script entries:
 
 ### Local script fields
 
+Each local script defines either `path` or `inline`, never both. The build fails if a script defines neither or both.
+
 | Field | Description |
 | --- | --- |
-| `path` | Path to the local script. |
+| `path` | Path to the local script, relative to the workspace root. |
+| `inline` | Shell code to run directly from the hook, without a separate script file. See [Inline scripts](#inline-scripts). |
+
+### Inline scripts
+
+Short commands can be written directly in the configuration file with `inline`, usually as a YAML block scalar (`|`):
+
+```yaml
+schema: 2
+
+hooks:
+  local:
+    scripts:
+      - id: run-sh-tests
+        inline: |
+          ./test/bash-hooks.test.sh
+```
+
+Inline code behaves like a script:
+
+- It runs in a subshell, so `exit` only ends that script and the hook continues with the next one.
+- Its exit code is evaluated with `expect` and `return`, and exit code `2` fails the hook, as for any other script.
+- `args` and `flags` are available as `"$@"`.
+- It is written to the hook exactly as typed: quotes, `$` and backslashes are not modified.
+- It runs from the workspace root, like local scripts.
+- It requires `schema: 2` or later.
+
+Inline code is indented inside the generated hook, so heredocs (`<<EOF`) are not supported. Use a script with `path` when more complex code is needed.
 
 See the [configuration template](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yml) for a complete example.
+
+### Hook generation
+
+The hook is built in a temporary file next to the final one and only replaces the existing hook once the build succeeds and its syntax has been checked with `bash -n`. A failed build, for example because of an invalid configuration, a missing local script or a failed download, always keeps the previous hook.
 
 ### Script exit codes
 
@@ -80,7 +128,7 @@ Exit code `2` is reserved by `bash-hooks` for argument validation errors and sho
 
 ## Global Installation
 
-The global installer (`install.sh`) installs `bash-hooks` in the user's local binary directory and adds its directory to `PATH`.
+The global installer (`installer.sh`) installs `bash-hooks` in the user's local binary directory and adds its directory to `PATH`.
 
 Default installation path:
 
@@ -116,7 +164,7 @@ Without a tag, remote installation downloads the latest version available from t
 
 ## CLI Reference
 
-By default, the `bash-hooks`script is located in the same workspace as the installer, but it can also be installed globally.
+By default, the `bash-hooks` script is located in the same workspace as the installer, but it can also be installed globally.
 
 ### Commands and options
 
@@ -125,8 +173,15 @@ By default, the `bash-hooks`script is located in the same workspace as the insta
 | Option | Description |
 | --- | --- |
 | `-h`, `--help` | Displays help. |
-| `-v`, `--version` | Displays the current version. |
-| `-u`, `--update[=<tag>]` | Updates the script to the specified tag, or to the latest version if no tag is provided. |
+| `-v`, `--version` | Displays the installer version and the project release it belongs to. |
+| `-u`, `--update[=<project-tag>]` | Updates the installer from the given project release, or from the main branch if no tag is provided. |
+
+The installer and the project are versioned separately. `--update` expects a **project** release tag, which is the version shown in parentheses by `--version`:
+
+```text
+$ bash-hooks --version
+bash-hooks 0.20.0 (project 0.25.0)
+```
 
 **Build**
 
@@ -139,12 +194,19 @@ By default, the `bash-hooks`script is located in the same workspace as the insta
 | `-b`, `--block` | Generates a single-file script without imports. |
 | `-t`, `--test` | Runs the script in test mode, placing it in the remote-scripts directory so Git will not use it as a hook. |
 
-**Packages**
+**Hook state**
 
 | Option | Description |
 | --- | --- |
-| `-d`, `--disable[=<id>[,<id>...]]` | Disables the given script IDs, or the whole hook if none is given. If the hook does not exist, it is created disabled. |
-| `-e`, `--enable[=<id>[,<id>...]]` | Enables the given script IDs, or the whole hook if none is given. If the hook does not exist, it is created enabled. |
+| `-d`, `--disable[=<id>[,<id>...]]` | Disables the given script IDs, or the whole hook if none is given. |
+| `-e`, `--enable[=<id>[,<id>...]]` | Enables the given script IDs, or the whole hook if none is given. |
+
+These options change an existing hook in place and do not need the configuration file:
+
+- The hook must already exist; otherwise the command fails. Generate it first by running `bash-hooks`.
+- An unknown script ID fails without changing the hook.
+- Different scripts can be enabled and disabled in the same call (`--enable=a --disable=b`).
+- `--enable` and `--disable` for the whole hook cannot be combined, and neither can be combined with per-script options. Both cases exit with code `2`.
 
 **Remote**
 
@@ -152,6 +214,14 @@ By default, the `bash-hooks`script is located in the same workspace as the insta
 | --- | --- |
 | `--pull=<script>:<tag>` | Downloads a remote script at the specified version. |
 | `--sync[=<tag>]` | Sets the tag of every `bash-hooks` remote script in the input file to the specified version, or to the latest version if no tag is provided. The input file is the one selected by `--workspace` and `--input`. |
+
+### Exit codes
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | The command succeeded. |
+| `1` | The command failed, for example because of an invalid configuration, a missing hook or a failed download. |
+| `2` | Invalid or incompatible options. |
 
 Examples:
 
@@ -161,6 +231,9 @@ Examples:
 
 # Disable a selected script
 ./bash-hooks --disable=run-linter
+
+# Enable and disable different scripts at once
+./bash-hooks --enable=run-linter --disable=check-staged
 
 # Select a workspace and configuration file
 ./bash-hooks --workspace=../other_project/my_project
@@ -182,6 +255,18 @@ Examples:
 # Point every bash-hooks remote script to the latest version
 ./bash-hooks --sync
 ```
+
+## Testing
+
+The installer has a behaviour test suite under `test/`, with no dependencies other than those of the installer itself:
+
+```bash
+./test/bash-hooks.test.sh                      # tests ./bash-hooks
+./test/bash-hooks.test.sh path/to/installer
+TEST_FILTER=inline ./test/bash-hooks.test.sh   # only tests whose name contains "inline"
+```
+
+Each test runs in its own temporary directory against a private copy of the installer, so the repository is never modified. Network access is not needed: `curl` is replaced by a stub.
 
 ## Package Reference
 

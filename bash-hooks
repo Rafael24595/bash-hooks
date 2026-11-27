@@ -1,15 +1,16 @@
 #!/bin/bash
 
-_VERSION="0.19.0"
-_REPOSITORY="https://github.com/Rafael24595/bash-hooks"
+_VERSION="0.20.0"
+_PROJECT_VERSION="0.25.0"
 
+_REPOSITORY="https://github.com/Rafael24595/bash-hooks"
 _REMOTE_DATA="https://raw.githubusercontent.com/Rafael24595/bash-hooks/refs/heads/main/project.toml"
 
 _CURRENT_LOCATION="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# -------------#
-# DECLARATIONS #
-# ------------ #
+# ========= #
+# CONSTANTS #
+# ========= #
 
 # Color codes
 BOLD="\033[1m"
@@ -19,71 +20,77 @@ YELLOW="\033[0;33m"
 RESET="\033[0m"
 
 INSTALLER_NAME="$(basename "$0")"
-
-DEFAULT_HOOK_MODE="pre-commit"
-DEFAULT_INPUT_FILE="pre-commit-build.y*ml"
-DEFAULT_OUTPUT_FILE=".git/hooks/${DEFAULT_HOOK_MODE}"
-
 REMOTE_LOCATION=".remote-scripts"
 
-IS_TEST=false
+DEFAULT_HOOK_MODE="pre-commit"
+DEFAULT_INPUT_PATTERN="pre-commit-build.y*ml"
+DEFAULT_OUTPUT_FILE=".git/hooks/${DEFAULT_HOOK_MODE}"
+DEFAULT_DISABLED_HOOK=false
 
-BLOCK_PACKAGES="#!/bin/bash"
-IS_BLOCK=false
+# ========= #
+# UTILITIES #
+# ========= #
+
+exit_error() {
+    local MESSAGE=$1
+
+    echo -e "\n${RED}Error: ${MESSAGE}${RESET}\n" >&2
+
+    if [[ -n "$BUILD_FILE" ]]; then
+        rm -f "$BUILD_FILE"
+    fi
+
+    exit 1
+}
+
+truncate_file() {
+    local FILE=$1
+    'true' > "$FILE"
+}
+
+require_file() {
+    local FILE=$1
+    if [[ ! -f "$FILE" ]]; then
+        exit_error "File does not exist."
+    fi
+}
+
+print_separator() {
+    echo -e "\n------------------------------------------------------------------------------------------------"
+}
+
+# === #
+# CLI #
+# === #
+
+# -------------- #
+# Parsed options #
+# -------------- #
 
 WORKSPACE="."
-
-HOOK_MODE=$DEFAULT_HOOK_MODE
-INPUT_FILE=$DEFAULT_INPUT_FILE
+INPUT_PATTERN=$DEFAULT_INPUT_PATTERN
 OUTPUT_FILE=$DEFAULT_OUTPUT_FILE
+HOOK_MODE=$DEFAULT_HOOK_MODE
 
-LAST_CONTENT=""
-declare -A DOWNLOADED_SOURCES
-
-COUNT_SOURCES=0
-COUNT_LOCAL=0
-COUNT_REMOTE=0
-COUNT_IGNORED=0
-
-LIST_SOURCES=""
-LIST_LOCAL=""
-LIST_REMOTE=""
-LIST_IGNORED=""
-
-START_TIME=$(date +%s%3N)
-
-# ---------------- #
-# STARTUP VARIBLES #
-# ---------------- #
+IS_TEST=false
+IS_BLOCK=false
 
 EXECUTE_UPDATE=false
-SOURCE_UPDATE_VERSION=""
+UPDATE_VERSION=""
 
 EXECUTE_PULL=false
-SOURCE_PULL_PACKAGE=""
-
-DISABLE_HOOK_STATUS=-1
-DISABLE_HOOK=false
-HOOKS_TO_UPDATE=()
+PULL_TARGET=""
 
 EXECUTE_SYNC=false
 SYNC_TAG=""
 
-# -------------- #
-# MISC FUNCTIONS #
-# -------------- #
+EXECUTE_STATUS=false
+DISABLED_HOOK=$DEFAULT_DISABLED_HOOK
+SCRIPT_STATES=()
 
-exit_error() {
-    local MESSAGE=$1
-    echo -e "\n${RED}Error: ${MESSAGE}${RESET}\n" >&2
-    clean_output "$OUTPUT_FILE"
-    exit 1
-}
-
-clean_output() {
-    local FILE=$1
-    'true' > "$FILE"
-}
+# --------- #
+# Functions #
+# --------- #
 
 print_help() {
     echo -e "\nUsage:"
@@ -92,176 +99,301 @@ print_help() {
     echo -e "\nFlags:"
 
     echo -e "  System flags:"
-    echo -e "   -h --help                   $YELLOW Help command. $RESET"
-    echo -e "   -v --version                $YELLOW Shows actual installer version. $RESET"
-    echo -e "   -u --update[=<tag>]         $YELLOW Updates the installer to the defined version. If a version is not specified, it will be updated to the latest version. $RESET"
+    echo -e "   -h --help                    $YELLOW Help command. $RESET"
+    echo -e "   -v --version                 $YELLOW Shows the installer version and the project release it belongs to. $RESET"
+    echo -e "   -u --update[=<project-tag>]  $YELLOW Updates the installer from the given project release (see --version). Without a tag, it is updated from the main branch. $RESET"
 
     echo -e "\n  Build flags:"
-    echo -e "      --mode=<type>            $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
-    echo -e "      --workspace=<path>       $YELLOW Defines the workspace where the script will be placed. $RESET"
-    echo -e "      --input=<path>           $YELLOW Defines the directory and name where the input file is located. $RESET"
-    echo -e "      --output=<path>          $YELLOW Defines directory and name where the script will be placed. $RESET"
-    echo -e "   -b --block                  $YELLOW Generates the script as a single file without imports. $RESET"
-    echo -e "   -t --test                   $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
+    echo -e "      --mode=<type>             $YELLOW Specifies the build mode. Default is pre_commit. Valid options: pre_commit, pre_push. $RESET"
+    echo -e "      --workspace=<path>        $YELLOW Defines the workspace where the script will be placed. $RESET"
+    echo -e "      --input=<path>            $YELLOW Defines the directory and name where the input file is located. $RESET"
+    echo -e "      --output=<path>           $YELLOW Defines directory and name where the script will be placed. $RESET"
+    echo -e "   -b --block                   $YELLOW Generates the script as a single file without imports. $RESET"
+    echo -e "   -t --test                    $YELLOW The script will be mounted inside the remote-scripts directory to prevent it from being used by Git. $RESET"
 
-    echo -e "\n  Package flags:"
-    echo -e "   -d --disable[=<pkg>]        $YELLOW Disables the given packages, or the whole hook if none is given. If the hook does not exist, it is created disabled. $RESET"
-    echo -e "   -e --enable[=<pkg>]         $YELLOW Enables the given packages, or the whole hook if none is given. If the hook does not exist, it is created enabled. $RESET"
+    echo -e "\n  Hook state flags:"
+    echo -e "   -d --disable[=<id>]          $YELLOW Disables the given scripts, or the whole hook if none is given. $RESET"
+    echo -e "   -e --enable[=<id>]           $YELLOW Enables the given scripts, or the whole hook if none is given. $RESET"
 
     echo -e "\n  Remote flags:"
-    echo -e "     --pull=<target/file:tag>  $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
-    echo -e "     --sync[=<tag>]            $YELLOW Sets the tag of every bash-hooks remote script in the input file to the given version. If a version is not specified, the latest version is used. $RESET"
+    echo -e "     --pull=<target/file:tag>   $YELLOW Downloads the specified remote script at the given version. Example: golang/sh/run-govulncheck.sh:0.6.3 $RESET"
+    echo -e "     --sync[=<tag>]             $YELLOW Sets the tag of every bash-hooks remote script in the input file to the given version. If a version is not specified, the latest version is used. $RESET"
     echo ""
 }
 
-execution_resume() {
-    END_TIME=$(date +%s%3N)
-    TIME=$((END_TIME - START_TIME))
+validate_global_state_input() {
+    local CANDIDATE="$1"
 
-    echo -e "[${BOLD}$COUNT_REMOTE${RESET}] Remote scripts: $LIST_REMOTE"
-    echo -e "[${BOLD}$COUNT_SOURCES${RESET}] Sources: $LIST_SOURCES"
-    echo -e "[${BOLD}$COUNT_LOCAL${RESET}] Local scripts: $LIST_LOCAL"
-    echo -e "[${BOLD}$COUNT_IGNORED${RESET}] Ignored scripts: $LIST_IGNORED"
-
-    echo -e "\n${YELLOW}Execution time: ${TIME} ms${RESET}"
-
-    echo ""
-}
-
-# ---------------- #
-# INPUT PROCESSING #
-# ---------------- #
-
-for ARG in "$@"; do
-  case "$ARG" in
-    --help | -h)
-      print_help
-      exit 0
-      ;;
-    --version | -v)
-      echo "$INSTALLER_NAME version $_VERSION ($_REPOSITORY)"
-      exit 0
-      ;;
-    --update=* | -u=*)
-      SOURCE_UPDATE_VERSION="${ARG#*=}"
-      EXECUTE_UPDATE=true
-      ;;
-    --update | -u)
-      EXECUTE_UPDATE=true
-      ;;
-    
-    --mode=*)
-      ARG="${ARG#--mode=}"
-      case "$ARG" in
-        "pre_commit")
-          HOOK_MODE="pre-commit"
-          ;;
-        "pre_push")
-          HOOK_MODE="pre-push"
-          ;;
-        *)
-          echo -e "${RED}\nError: unknown option: $ARG${RESET}"
-          exit 2
-          ;;
-      esac
-      OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
-      ;;
-    --workspace=*)
-      WORKSPACE="${ARG#*=}"
-      ;;
-    --input=*)
-      INPUT_FILE="${ARG#*=}"
-      ;;
-    --output=*)
-      OUTPUT_FILE="${ARG#*=}"
-      ;;
-    --block | -b)
-      IS_BLOCK=true
-      ;;
-    --test | -t)
-      OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.${HOOK_MODE}"
-      IS_TEST=true
-      ;;
-    
-    --enable | -e)
-      DISABLE_HOOK_STATUS=0
-      ;;
-    --enable=* | -e=*)
-      DISABLE_HOOK_STATUS=0
-      IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
-      HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
-      ;;
-    --disable | -d)
-      DISABLE_HOOK_STATUS=1
-      ;;
-    --disable=* | -d=*)
-      DISABLE_HOOK_STATUS=1
-      IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
-      HOOKS_TO_UPDATE+=("${BLOCKS[@]}")
-      ;;
-    
-    --pull=*)
-      EXECUTE_PULL=true
-      SOURCE_PULL_PACKAGE="${ARG#--pull=}"
-      REMOTE_LOCATION="."
-      ;;
-    --sync)
-      EXECUTE_SYNC=true
-      ;;
-    --sync=*)
-      EXECUTE_SYNC=true
-      SYNC_TAG="${ARG#*=}"
-      ;;
-    *)
-      echo -e "${RED}\nError: unknown option: $ARG${RESET}"
-      exit 2
-      ;;
-  esac
-done
-
-INPUT_FILE="${WORKSPACE}/${INPUT_FILE}"
-if [[ "$INPUT_FILE" == *'*'* ]]; then
-    mapfile -t MATCHES < <(compgen -G "$INPUT_FILE")
-
-    if (( ${#MATCHES[@]} == 0 )); then
-        exit_error "No input file found matching '$INPUT_FILE'."
-    elif (( ${#MATCHES[@]} > 1 )); then
-        exit_error "Multiple input files found matching '$INPUT_FILE'."
+    if [[ "$EXECUTE_STATUS" == false ]]; then
+        return 0
     fi
 
-    INPUT_FILE="${MATCHES[0]}"
-fi
+    if (( ${#SCRIPT_STATES[@]} > 0 )); then
+        echo -e "${RED}\nError: incompatible options: global hook status cannot be set while individual hook statuses are specified.${RESET}"
+        return 2
+    fi
 
-OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
+    if [[ "$DISABLED_HOOK" == "$CANDIDATE" ]]; then
+        return 0
+    fi
 
-# --------- #
-# FUNCTIONS #
-# --------- #
+    echo -e "${RED}\nError: incompatible options: --enable and --disable cannot be used together.${RESET}"
+    return 2
+}
 
-sync_config_tags() {
-    local PROJECT_VERSION="$1"
+validate_script_state_input() {
+    if [[ "$EXECUTE_STATUS" == false ]] || (( ${#SCRIPT_STATES[@]} > 0 )); then
+        return 0
+    fi
 
-    echo -e "${BOLD}\nSyncing tags...${RESET}"
+    echo -e "${RED}\nError: incompatible options: global hook status cannot be set while individual hook statuses are specified.${RESET}"
 
-    if [ -z "$PROJECT_VERSION" ]; then
-        echo -e "${BOLD}\nFetching project version from remote...\n${RESET}"
-        echo -e "${YELLOW} - Remote source: $_REMOTE_DATA${RESET}"
+    return 2
+}
 
-        if ! CONTENT=$(curl -sf "$_REMOTE_DATA") ; then
-            exit_error "Failed to retrieve script from GitHub."
+parse_arguments() {
+    local ARG
+    local BLOCK
+
+    local BLOCKS=()
+
+    for ARG in "$@"; do
+    case "$ARG" in
+        --help | -h)
+            print_help
+            exit 0
+            ;;
+        --version | -v)
+            echo "$INSTALLER_NAME $_VERSION (project $_PROJECT_VERSION)"
+            echo "$_REPOSITORY"
+            exit 0
+            ;;
+        --update=* | -u=*)
+            EXECUTE_UPDATE=true
+            UPDATE_VERSION="${ARG#*=}"
+            ;;
+        --update | -u)
+            EXECUTE_UPDATE=true
+            ;;
+        
+        --mode=*)
+            ARG="${ARG#--mode=}"
+            case "$ARG" in
+                "pre_commit")
+                HOOK_MODE="pre-commit"
+                ;;
+                "pre_push")
+                HOOK_MODE="pre-push"
+                ;;
+                *)
+                echo -e "${RED}\nError: unknown option: $ARG${RESET}"
+                exit 2
+                ;;
+            esac
+            OUTPUT_FILE=".git/hooks/${HOOK_MODE}"
+            ;;
+        --workspace=*)
+            WORKSPACE="${ARG#*=}"
+            ;;
+        --input=*)
+            INPUT_PATTERN="${ARG#*=}"
+            ;;
+        --output=*)
+            OUTPUT_FILE="${ARG#*=}"
+            ;;
+        --block | -b)
+            IS_BLOCK=true
+            ;;
+        --test | -t)
+            IS_TEST=true
+            OUTPUT_FILE="${REMOTE_LOCATION}/.temp/.${HOOK_MODE}"
+            ;;
+        
+        --enable | -e)
+            validate_global_state_input false || exit $?
+
+            EXECUTE_STATUS=true
+            DISABLED_HOOK=false
+            ;;
+        --enable=* | -e=*)
+            validate_script_state_input || exit $?
+
+            EXECUTE_STATUS=true
+            
+            IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
+            for BLOCK in "${BLOCKS[@]}"; do
+                SCRIPT_STATES+=("${BLOCK}=true")
+            done
+            ;;
+        --disable | -d)
+            validate_global_state_input true || exit $?
+
+            EXECUTE_STATUS=true
+            DISABLED_HOOK=true
+            ;;
+        --disable=* | -d=*)
+            validate_script_state_input || exit $?
+
+            EXECUTE_STATUS=true
+
+            IFS=',' read -ra BLOCKS <<< "${ARG#*=}"
+            for BLOCK in "${BLOCKS[@]}"; do
+                SCRIPT_STATES+=("${BLOCK}=false")
+            done
+            ;;
+        
+        --pull=*)
+            EXECUTE_PULL=true
+            PULL_TARGET="${ARG#--pull=}"
+            REMOTE_LOCATION="."
+            ;;
+        --sync)
+            EXECUTE_SYNC=true
+            ;;
+        --sync=*)
+            EXECUTE_SYNC=true
+            SYNC_TAG="${ARG#*=}"
+            ;;
+        *)
+            echo -e "${RED}\nError: unknown option: $ARG${RESET}"
+            exit 2
+            ;;
+    esac
+    done
+}
+
+# ====== #
+# CONFIG #
+# ====== #
+
+declare -A CONFIG_LISTS=(
+    [local]="local_scripts"
+    [remote]="remote_repos"
+)
+
+declare -A CONFIG_INDEX
+
+config_validate() {
+    { yq eval '.' "$INPUT_FILE" > /dev/null; } 2>&1
+}
+
+config_load() {
+    local ASSIGNMENTS
+    if ! ASSIGNMENTS=$(yq -o=shell '{"cfg": .hooks}' "$INPUT_FILE" 2>&1); then
+        exit_error "Invalid YAML format: $ASSIGNMENTS"
+    fi
+
+    eval "$ASSIGNMENTS"
+
+    local LIST
+    local REF_LIST
+    local PREFIX
+    local REF_VAR
+
+    local I
+    local KEY
+
+    for LIST in "${!CONFIG_LISTS[@]}"; do
+        REF_LIST="${CONFIG_LISTS[$LIST]}"
+        PREFIX="cfg_${REF_LIST}"
+        
+        for (( I = 0; ; I++ )); do
+            REF_VAR="${PREFIX}_${I}_id"
+            if [[ ! -v $REF_VAR ]]; then
+                break
+            fi
+
+            KEY="$LIST.${!REF_VAR}"
+            CONFIG_INDEX[$KEY]=$I
+        done
+    done
+}
+
+config_ids() {
+    local LIST=$1
+
+    local REF_LIST="${CONFIG_LISTS[$LIST]}"
+    local PREFIX="cfg_${REF_LIST}"
+
+    local REF_VAR
+    local I
+
+    for (( I = 0; ; I++ )); do
+        REF_VAR="${PREFIX}_${I}_id"
+        if [[ ! -v $REF_VAR ]]; then
+            break
+        fi
+        
+        printf '%s\n' "${!REF_VAR}"
+    done
+}
+
+config_field() {
+    local LIST=$1
+    local ID=$2
+    local FIELD=$3
+
+    local REF_LIST="${CONFIG_LISTS[$LIST]}"
+
+    local KEY="${LIST}.${ID}"
+    local REF_INDEX="${CONFIG_INDEX[$KEY]-}"
+
+    local REF_VAR="cfg_${REF_LIST}_${REF_INDEX}_${FIELD}"
+    if [[ -n "${!REF_VAR-}" ]]; then
+        printf '%s\n' "${!REF_VAR}"
+    else
+        printf 'null\n'
+    fi
+}
+
+config_list_field() {
+    local LIST=$1
+    local ID=$2
+    local FIELD=$3
+
+    local REF_LIST="${CONFIG_LISTS[$LIST]}"
+
+    local KEY="${LIST}.${ID}"
+    local REF_INDEX="${CONFIG_INDEX[$KEY]-}"
+
+    local PREFIX="cfg_${REF_LIST}_${REF_INDEX}_${FIELD}"
+
+    local REF_VAR
+    local RESULT=""
+
+    local I
+
+    for (( I = 0; ; I++ )); do
+        REF_VAR="${PREFIX}_${I}"
+        if [[ ! -v $REF_VAR ]]; then
+            break
         fi
 
-        PROJECT_VERSION=$(grep -A 5 '^\[project\]' <<< "$CONTENT" | grep '^version' | head -n 1 | cut -d'"' -f2)
-    fi
+        RESULT+="${RESULT:+ }${!REF_VAR}"
+    done
 
-    echo -e "${YELLOW} - Detected version: $PROJECT_VERSION${RESET}"
-
-    sed -i "/origin: https:\/\/github.com\/Rafael24595\/bash-hooks/{n; s/tag: .*/tag: $PROJECT_VERSION/}" "$INPUT_FILE"
-
-    echo -e "${GREEN}\nTags updated to $PROJECT_VERSION in $INPUT_FILE.${RESET}\n"
+    printf '%s\n' "$RESULT"
 }
 
-format_hook_name() {
+config_sources() {
+    local REF_VAR
+    local I
+
+    for (( I = 0; ; I++ )); do
+        REF_VAR="cfg_local_sources_${I}_path"
+        if [[ ! -v $REF_VAR ]]; then
+            break
+        fi
+        
+        printf '%s\n' "${!REF_VAR}"
+    done
+}
+
+# ========== #
+# HOOK STATE #
+# ========== #
+
+hook_variable_name() {
     local SCRIPT_ID="$1"
 
     SCRIPT_ID="${SCRIPT_ID^^}"
@@ -270,13 +402,24 @@ format_hook_name() {
     echo "HOOK_${SCRIPT_ID}"
 }
 
-update_hook_variable() {
+set_hook_variable() {
     local HOOK_NAME=$1
     local NEW_STATE=$2
+
     local TEMP_FILE="${OUTPUT_FILE}.tmp"
 
     if [[ ! -f "$OUTPUT_FILE" ]]; then
         echo -e "${RED}Hook '$OUTPUT_FILE' does not exist.${RESET}"
+        return 1
+    fi
+
+    if ! grep -q "^${HOOK_NAME}=" "$OUTPUT_FILE"; then
+        echo -e "${RED}Unknown hook '${HOOK_NAME}' in '$OUTPUT_FILE'.${RESET}" >&2
+        return 1
+    fi
+
+    if ! cp -p "$OUTPUT_FILE" "$TEMP_FILE"; then
+        echo -e "${RED}Failed to update hook '$OUTPUT_FILE'.${RESET}"
         return 1
     fi
 
@@ -293,188 +436,96 @@ update_hook_variable() {
     fi
 }
 
-update_global_hook_state() {
-    local NEW_STATE
-
-    NEW_STATE=$([[ "$DISABLE_HOOK_STATUS" -eq 1 ]] && echo true || echo false)
-
-    if ! update_hook_variable "DISABLED_HOOK" "$NEW_STATE"; then
+set_global_hook_state() {
+    if ! set_hook_variable "DISABLED_HOOK" "$DISABLED_HOOK"; then
         echo -e "${RED}Failed to update global hook state.${RESET}"
         return 1
     fi
 
-    if [[ "${NEW_STATE}" == true ]]; then
+    if [[ "${DISABLED_HOOK}" == true ]]; then
         echo -e "${YELLOW}The hook '${OUTPUT_FILE}' has been disabled.${RESET}"
     else
         echo -e "${YELLOW}The hook '${OUTPUT_FILE}' has been enabled.${RESET}"
     fi
 }
 
-update_single_hook_state() {
-     for HOOK_ID in "${HOOKS_TO_UPDATE[@]}"; do
+set_script_states() {
+     for HOOK_TUPLE in "${SCRIPT_STATES[@]}"; do
         local HOOK_NAME
-        local NEW_STATE
+        local HOOK_STATUS
 
-        HOOK_NAME=$(format_hook_name "$HOOK_ID")
-        NEW_STATE=$([[ "$DISABLE_HOOK_STATUS" -eq 0 ]] && echo true || echo false)
+        HOOK_NAME=$(hook_variable_name "${HOOK_TUPLE%%=*}")
+        HOOK_STATUS="${HOOK_TUPLE#*=}"
 
-        if ! update_hook_variable "$HOOK_NAME" "$NEW_STATE"; then
-            echo -e "${RED}Failed to update hook '${HOOK_ID}'.${RESET}"
+        if ! set_hook_variable "$HOOK_NAME" "$HOOK_STATUS"; then
+            echo -e "${RED}Failed to update hook '${HOOK_NAME}'.${RESET}"
             return 1
         fi
 
-        if [[ "${NEW_STATE}" == true ]]; then
-            echo -e "${YELLOW}The hook '${HOOK_ID}' has been enabled.${RESET}"
+        if [[ "${HOOK_STATUS}" == true ]]; then
+            echo -e "${YELLOW}The hook '${HOOK_NAME}' has been enabled.${RESET}"
         else
-            echo -e "${YELLOW}The hook '${HOOK_ID}' has been disabled.${RESET}"
+            echo -e "${YELLOW}The hook '${HOOK_NAME}' has been disabled.${RESET}"
         fi
     done
 }
 
-update_hooks_state() {
-    if (( ${#HOOKS_TO_UPDATE[@]} > 0 )); then
-        update_single_hook_state
-    else
-        update_global_hook_state
-    fi
-}
+# ===== #
+# BUILD #
+# ===== #
 
-format_package_name() {
-    local PACKAGE="$1"
+INPUT_FILE=""
+BUILD_FILE=""
+
+BLOCK_CONTENT="#!/bin/bash"
+
+LAST_CONTENT=""
+declare -A LOADED_SOURCES
+
+# ----- #
+# Files #
+# ----- #
+
+resolve_input_file() {
+    local PATTERN="${WORKSPACE}/${INPUT_PATTERN}"
+    local MATCHES
+
+    mapfile -t MATCHES < <(compgen -G "$PATTERN")
+
+    if (( ${#MATCHES[@]} == 0 )); then
+        exit_error "No input file found matching '$PATTERN'."
+    fi
     
-    PACKAGE="${PACKAGE%.*}"
+    if (( ${#MATCHES[@]} > 1 )); then
+        exit_error "Multiple input files found matching '$PATTERN'."
+    fi
 
-    PACKAGE="${PACKAGE#./}"
-    PACKAGE="${PACKAGE#../}"
-
-    PACKAGE="${PACKAGE//[-\/\\]/_}"
-
-    echo "package_$PACKAGE"
+    INPUT_FILE="${MATCHES[0]}"
 }
 
-log_script_execution() {
-    local SCRIPT_ID=$1
-    local SCRIPT=$2
-    local EXPECT=$3
-    local RETURN=$4
-    local ARGS=$5
-    local FLAGS=$6
-    local IS_REMOTE=$7
-
-    local HOOK_NAME
-    local LOG_DIRECTION="ne"
-    local LOG_RETURN=1
-
-    if [[ "$IS_BLOCK" == true ]]; then
-        SCRIPT=$(format_package_name "$SCRIPT")
-    elif [[ "$IS_REMOTE" == true ]]; then
-        SCRIPT="$REMOTE_LOCATION/$SCRIPT"
-    fi
-
-    if [[ "$EXPECT" == "true" ]]; then
-        LOG_DIRECTION="eq"
-    fi
-
-    if [[ "$RETURN" == "true" ]]; then
-        LOG_RETURN=0
-    fi
-
-    local LOG_FLAGS=""
-    for flag in $FLAGS; do
-        if [[ -n "$LOG_FLAGS" ]]; then
-            LOG_FLAGS+=" "
-        fi
-        LOG_FLAGS+="--$flag"
-    done
-
-    ARGS="${ARGS#"${ARGS%%[![:space:]]*}"}"
-    ARGS="${ARGS%"${ARGS##*[![:space:]]}"}"
-
-    if [[ -n "$ARGS" ]]; then
-        ARGS=" $ARGS"
-    fi
-
-    if [[ -n "$LOG_FLAGS" ]]; then
-        LOG_FLAGS=" $LOG_FLAGS"
-    fi
-
-    HOOK_NAME=$(format_hook_name "$SCRIPT_ID")
-
-    {
-        echo
-        echo -e "${HOOK_NAME}=true"
-        echo -e "if [ \"\${$HOOK_NAME}\" == true ]; then"
-        echo -e "  printf \"\${BOLD}\\\\nExecuting '${SCRIPT}' script...\${RESET}\\\\n\""
-        echo -e "  $SCRIPT$ARGS$LOG_FLAGS"
-        echo -e "  EXIT_CODE=\$?"
-        echo -e "  if [ \$EXIT_CODE -eq 2 ]; then"
-        echo -e "      exit 1"
-        echo -e "  fi"
-        echo -e "  if [ \$EXIT_CODE -${LOG_DIRECTION} 0 ]; then"
-        echo -e "      exit ${LOG_RETURN}"
-        echo -e "  fi"
-        echo -e "  printf \"\${BOLD}\\\\n <-----------------> \\\\n\${RESET}\""
-        echo -e "fi"
-    } >> "$OUTPUT_FILE"
-}
-
-package_to_block() {
-    local PACKAGE=$1
-    local FILE_CONTENT=$2
-    local IS_MAIN=$3
+prepare_build_file() {
+    mkdir -p "$(dirname "$OUTPUT_FILE")" \
+        || exit_error "Cannot create directory for '$OUTPUT_FILE'."
     
-    FILE_CONTENT=${FILE_CONTENT//"#!/bin/bash"$'\n\n'/""}
-    # shellcheck disable=SC2001
-    FILE_CONTENT=$(echo "$FILE_CONTENT" | sed 's/^source /### source /')
+    BUILD_FILE="${OUTPUT_FILE}.tmp"
 
-    if [[ "$IS_MAIN" == true ]]; then
-        local FUNCTION
-        FUNCTION=$(format_package_name "$PACKAGE")
-
-        # shellcheck disable=SC2001
-        INDENTED_CONTENT=$(echo "$FILE_CONTENT" | sed 's/^/    /')
-
-        BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n\n'"### ### ### Function Package: $PACKAGE ### ### ###"$'\n'
-        BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n'"$FUNCTION() {"$'\n'"$INDENTED_CONTENT"$'\n'"}"
-    else
-        BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n\n'"### ### ### Source Package: $PACKAGE ### ### ###"$'\n'
-        BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n'"$FILE_CONTENT"
-    fi
+    truncate_file "$BUILD_FILE"
+    chmod +x "$BUILD_FILE"
 }
 
-fetch_write_remote_file() {
-    local PROJECT=$1
-    local FILE_URL=$2
-    local NAME=$3
-    local IS_MAIN=$4
-
-    local FILE="${NAME##*/}"
-
-    echo -e "\nFetching ${FILE} from ${BOLD}'${FILE_URL}'${RESET}..."
-
-    if ! CONTENT=$(curl -sf "$FILE_URL") ; then
-        exit_error "Failed to retrieve script from GitHub."
+publish_build_file() {
+    if ! mv "$BUILD_FILE" "$OUTPUT_FILE"; then
+        exit_error "Failed to install hook '$OUTPUT_FILE'."
     fi
 
-    load_remote_sources "$NAME" "$PROJECT" "$TAG" "${CONTENT}"
-    CONTENT="${LAST_CONTENT}"
-
-    if [ $IS_BLOCK == true ]; then
-        package_to_block "$NAME" "$CONTENT" "$IS_MAIN"
-    else
-        SCRIPT="${WORKSPACE}/${REMOTE_LOCATION}/${NAME}"
-
-        mkdir -p "$(dirname "$SCRIPT")"
-        touch "$SCRIPT"
-
-        clean_output "$SCRIPT"
-
-        echo "$CONTENT" >> "${SCRIPT}"
-        chmod +x "$SCRIPT"
-    fi
+    BUILD_FILE=""
 }
 
-load_remote_sources() {
+# ------ #
+# Remote #
+# ------ #
+
+resolve_remote_sources() {
     local NAME=$1
     local PROJECT=$2
     local TAG=$3
@@ -501,13 +552,13 @@ load_remote_sources() {
 
         local FILE_SOURCE="${SOURCE##*/}"
 
-        if [[ ! -v DOWNLOADED_SOURCES["$FIX_SOURCE"] ]]; then
+        if [[ ! -v LOADED_SOURCES["$FIX_SOURCE"] ]]; then
             echo -e "Source found: ${FIX_SOURCE}"
-            fetch_write_remote_file "$PROJECT" "$FILE_URL" "$FIX_SOURCE" 0
-            DOWNLOADED_SOURCES["$FIX_SOURCE"]=1
+            fetch_remote_script "$PROJECT" "$FILE_URL" "$FIX_SOURCE" false
+            LOADED_SOURCES["$FIX_SOURCE"]=1
 
             COUNT_SOURCES=$((COUNT_SOURCES + 1))
-            if [ -n "$LIST_SOURCES" ]; then
+            if [[ -n "$LIST_SOURCES" ]]; then
                 LIST_SOURCES+=", "
             fi
             LIST_SOURCES+="${GREEN}$FILE_SOURCE${RESET}"
@@ -523,114 +574,80 @@ load_remote_sources() {
     LAST_CONTENT="${UPDATED_SCRIPT}"
 }
 
-load_remote_scripts() {
-    echo -e "\n${YELLOW}Loading remote scipts...${RESET}"
+fetch_remote_script() {
+    local PROJECT=$1
+    local FILE_URL=$2
+    local NAME=$3
+    local IS_MAIN=$4
 
-    REPO_IDS=$(yq eval '.hooks.remote.repos[].id' "${INPUT_FILE}")
-    if [[ -z "$REPO_IDS" ]]; then
-        echo -e "${GREEN}\nNo remote scripts found.${RESET}"
-        return
+    local FILE="${NAME##*/}"
+
+    echo -e "\nFetching ${FILE} from ${BOLD}'${FILE_URL}'${RESET}..."
+
+    if ! CONTENT=$(curl -sf "$FILE_URL") ; then
+        exit_error "Failed to retrieve script from GitHub."
     fi
 
-    for REPO_ID in $REPO_IDS; do
-        NAME=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .name" "${INPUT_FILE}")
-        ORIGIN=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .origin" "${INPUT_FILE}")
-        TAG=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .tag" "${INPUT_FILE}")
-        TARGET=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .target" "${INPUT_FILE}")
-        
-        EXPECT=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .expect" "${INPUT_FILE}")
-        RETURN=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .return" "${INPUT_FILE}")
+    resolve_remote_sources "$NAME" "$PROJECT" "$TAG" "${CONTENT}"
+    CONTENT="${LAST_CONTENT}"
 
-        ARGS=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
-        FLAGS=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .flags[]" "${INPUT_FILE}" | tr '\n' ' ')
-        FILE_URL=""
+    if [[ $IS_BLOCK == true ]]; then
+        block_add_package "$NAME" "$CONTENT" "$IS_MAIN"
+    else
+        SCRIPT="${WORKSPACE}/${REMOTE_LOCATION}/${NAME}"
 
-        if [[ $NAME != *.sh ]]; then
-            exit_error "Only Bash scripts are supported so far."
-        fi
+        mkdir -p "$(dirname "$SCRIPT")"
+        touch "$SCRIPT"
 
-        local PROJECT=""
-        if [[ "$ORIGIN" == https://github.com* ]]; then
-            PROJECT="${ORIGIN#https://github.com/}"
-            FILE_URL="https://raw.githubusercontent.com/${PROJECT}/refs/tags/${TAG}/${TARGET}/${NAME}"
-        else
-            exit_error "Currently, only GitHub repositories are supported."
-        fi
+        truncate_file "$SCRIPT"
 
-        echo -e "\nReading ${BOLD}'${NAME}' script configuration${RESET}..."
-
-        DISABLED=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .disabled" "${INPUT_FILE}")
-        if [[ "$DISABLED" == "true" ]]; then
-            echo -e "${YELLOW}The script is flagged as disabled; skipping....${RESET}"
-            COUNT_IGNORED=$((COUNT_IGNORED + 1))
-            if [ -n "$LIST_IGNORED" ]; then
-                LIST_IGNORED+=", "
-            fi
-            LIST_IGNORED+="${GREEN}$NAME${RESET}"
-
-            continue
-        fi
-
-        local LOCATION="${TARGET}/${NAME}"
-
-        fetch_write_remote_file "$PROJECT" "$FILE_URL" "$LOCATION" true
-        
-        log_script_execution "$REPO_ID" "$LOCATION" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" true
-
-        COUNT_REMOTE=$((COUNT_REMOTE + 1))
-        if [ -n "$LIST_REMOTE" ]; then
-            LIST_REMOTE+=", "
-        fi
-        LIST_REMOTE+="${GREEN}$NAME${RESET}"
-
-        echo -e "${GREEN}Script loadded successfully.${RESET}"
-    done
-}
-
-load_sources() {
-    echo -e "${YELLOW}\nLoading sources...${RESET}"
-
-    SOURCES=$(yq eval '.hooks.local.sources[].path' "${INPUT_FILE}")
-    if [[ -z "$SOURCES" ]]; then
-        echo -e "${GREEN}\nNo remote scripts found.${RESET}"
-        return
+        echo "$CONTENT" >> "${SCRIPT}"
+        chmod +x "$SCRIPT"
     fi
-
-    for SOURCE in $SOURCES; do
-        {
-            echo -e "\n# Import ${SOURCE}"
-            echo "source ${SOURCE}"
-        } >> "$OUTPUT_FILE"
-
-        chmod +x "$SOURCE"
-
-        COUNT_SOURCES=$((COUNT_SOURCES + 1))
-        if [ -n "$LIST_SOURCES" ]; then
-            LIST_SOURCES+=", "
-        fi
-        LIST_SOURCES+="${GREEN}$SOURCE${RESET}"
-    done
-
-    echo ""
 }
 
-local_package_to_block() {
-    local PACKAGE=$1
-    local IS_MAIN=$2
+# ---------- #
+# Block mode #
+# ---------- #
+
+package_function_name() {
+    local PACKAGE="$1"
     
-    local LOCATION="${WORKSPACE}/${PACKAGE}"
+    PACKAGE="${PACKAGE%.*}"
 
-    file_must_exists "$LOCATION"
+    PACKAGE="${PACKAGE#./}"
+    PACKAGE="${PACKAGE#../}"
 
-    local FILE_CONTENT
-    FILE_CONTENT=$(<"$LOCATION")
+    PACKAGE="${PACKAGE//[-\/\\]/_}"
 
-    local_sources_to_block "$PACKAGE" "$FILE_CONTENT"
-
-    package_to_block "$PACKAGE" "$FILE_CONTENT" "$IS_MAIN"
+    echo "package_$PACKAGE"
 }
 
-local_sources_to_block() {
+block_add_package() {
+    local PACKAGE=$1
+    local FILE_CONTENT=$2
+    local IS_MAIN=$3
+    
+    FILE_CONTENT=${FILE_CONTENT//"#!/bin/bash"$'\n\n'/""}
+    # shellcheck disable=SC2001
+    FILE_CONTENT=$(echo "$FILE_CONTENT" | sed 's/^source /### source /')
+
+    if [[ "$IS_MAIN" == true ]]; then
+        local FUNCTION
+        FUNCTION=$(package_function_name "$PACKAGE")
+
+        # shellcheck disable=SC2001
+        INDENTED_CONTENT=$(echo "$FILE_CONTENT" | sed 's/^/    /')
+
+        BLOCK_CONTENT="$BLOCK_CONTENT"$'\n\n'"### ### ### Function Package: $PACKAGE ### ### ###"$'\n'
+        BLOCK_CONTENT="$BLOCK_CONTENT"$'\n'"$FUNCTION() {"$'\n'"$INDENTED_CONTENT"$'\n'"}"
+    else
+        BLOCK_CONTENT="$BLOCK_CONTENT"$'\n\n'"### ### ### Source Package: $PACKAGE ### ### ###"$'\n'
+        BLOCK_CONTENT="$BLOCK_CONTENT"$'\n'"$FILE_CONTENT"
+    fi
+}
+
+block_add_local_sources() {
     local NAME=$1
     local SCRIPT=$2
     
@@ -646,43 +663,264 @@ local_sources_to_block() {
         local LOCAL_SOURCE="$SOURCE"
         local FIX_SOURCE="${LOCAL_SOURCE#./}"
 
-        if [[ ! -v DOWNLOADED_SOURCES["$FIX_SOURCE"] ]]; then
+        if [[ ! -v LOADED_SOURCES["$FIX_SOURCE"] ]]; then
             echo -e "Source found: ${FIX_SOURCE}"
 
-            local_package_to_block "$FIX_SOURCE"
+            block_add_local_package "$FIX_SOURCE"
 
-            DOWNLOADED_SOURCES["$FIX_SOURCE"]=1
+            LOADED_SOURCES["$FIX_SOURCE"]=1
         else
             echo -e "Source found: ${FIX_SOURCE} [${GREEN}cached${RESET}]"
         fi
     done
 }
 
+block_add_local_package() {
+    local PACKAGE=$1
+    local IS_MAIN=$2
+    
+    local LOCATION="${WORKSPACE}/${PACKAGE}"
+
+    require_file "$LOCATION"
+
+    local FILE_CONTENT
+    FILE_CONTENT=$(<"$LOCATION")
+
+    block_add_local_sources "$PACKAGE" "$FILE_CONTENT"
+
+    block_add_package "$PACKAGE" "$FILE_CONTENT" "$IS_MAIN"
+}
+
+# ----------- #
+# Hook writer #
+# ----------- #
+
+inline_command() {
+    local CODE=$1
+    local ARGS=$2
+
+    local LINE
+
+    printf '(\n'
+
+    if [[ -n "$ARGS" ]]; then
+        printf '    set -- %s\n' "$ARGS"
+    fi
+    
+    while IFS= read -r LINE; do
+        printf '    %s\n' "$LINE"
+    done <<< "$CODE"
+
+    printf '  )'
+}
+
+format_arguments() {
+    local ARGS=$1
+    local FLAGS=$2
+
+    local FLAG
+    local RESULT
+
+    ARGS="${ARGS#"${ARGS%%[![:space:]]*}"}"
+    ARGS="${ARGS%"${ARGS##*[![:space:]]}"}"
+
+    RESULT="$ARGS"
+
+    for FLAG in $FLAGS; do
+        RESULT+="${RESULT:+ }--${FLAG}"
+    done
+
+    printf '%s' "$RESULT"
+}
+
+write_script_invocation() {
+    local SCRIPT_ID=$1
+    local COMMAND=$2
+    local EXPECT=$3
+    local RETURN=$4
+
+    local HOOK_NAME
+    local LOG_DIRECTION="ne"
+    local LOG_RETURN=1
+
+    if [[ "$EXPECT" == "true" ]]; then
+        LOG_DIRECTION="eq"
+    fi
+
+    if [[ "$RETURN" == "true" ]]; then
+        LOG_RETURN=0
+    fi
+
+    HOOK_NAME=$(hook_variable_name "$SCRIPT_ID")
+
+    {
+        echo
+        echo -e "${HOOK_NAME}=true"
+        echo -e "if [[ \"\${$HOOK_NAME}\" == true ]]; then"
+        echo -e "  printf \"\${BOLD}\\\\nExecuting '${SCRIPT_ID}' script...\${RESET}\\\\n\""
+        printf '  %s\n' "$COMMAND"
+        echo -e "  EXIT_CODE=\$?"
+        echo -e "  if [[ \$EXIT_CODE -eq 2 ]]; then"
+        echo -e "      exit 1"
+        echo -e "  fi"
+        echo -e "  if [[ \$EXIT_CODE -${LOG_DIRECTION} 0 ]]; then"
+        echo -e "      exit ${LOG_RETURN}"
+        echo -e "  fi"
+        echo -e "  printf \"\${BOLD}\\\\n <-----------------> \\\\n\${RESET}\""
+        echo -e "fi"
+    } >> "$BUILD_FILE"
+}
+
+# ------- #
+# Loaders #
+# ------- #
+
+load_sources() {
+    echo -e "${YELLOW}\nLoading sources...${RESET}"
+
+    SOURCES=$(config_sources)
+    if [[ -z "$SOURCES" ]]; then
+        echo -e "${GREEN}\nNo remote scripts found.${RESET}"
+        return
+    fi
+
+    for SOURCE in $SOURCES; do
+        {
+            echo -e "\n# Import ${SOURCE}"
+            echo "source ${SOURCE}"
+        } >> "$BUILD_FILE"
+
+        chmod +x "$SOURCE"
+
+        COUNT_SOURCES=$((COUNT_SOURCES + 1))
+        if [[ -n "$LIST_SOURCES" ]]; then
+            LIST_SOURCES+=", "
+        fi
+        LIST_SOURCES+="${GREEN}$SOURCE${RESET}"
+    done
+
+    echo ""
+}
+
+load_remote_scripts() {
+    local PROJECT
+    local LOCATION
+    local COMMAND
+
+    echo -e "\n${YELLOW}Loading remote scipts...${RESET}"
+
+    REPO_IDS=$(config_ids remote)
+    if [[ -z "$REPO_IDS" ]]; then
+        echo -e "${GREEN}\nNo remote scripts found.${RESET}"
+        return
+    fi
+
+    for REPO_ID in $REPO_IDS; do
+        NAME=$(config_field remote "$REPO_ID" name)
+        ORIGIN=$(config_field remote "$REPO_ID" origin)
+        TAG=$(config_field remote "$REPO_ID" tag)
+        TARGET=$(config_field remote "$REPO_ID" target)
+        
+        EXPECT=$(config_field remote "$REPO_ID" expect)
+        RETURN=$(config_field remote "$REPO_ID" return)
+
+        ARGS=$(config_list_field remote "$REPO_ID" args)
+        FLAGS=$(config_list_field remote "$REPO_ID" flags)
+
+        ARGUMENTS=$(format_arguments "$ARGS" "$FLAGS")
+
+        FILE_URL=""
+
+        if [[ $NAME != *.sh ]]; then
+            exit_error "Only Bash scripts are supported so far."
+        fi
+
+        PROJECT=""
+        if [[ "$ORIGIN" == https://github.com* ]]; then
+            PROJECT="${ORIGIN#https://github.com/}"
+            FILE_URL="https://raw.githubusercontent.com/${PROJECT}/refs/tags/${TAG}/${TARGET}/${NAME}"
+        else
+            exit_error "Currently, only GitHub repositories are supported."
+        fi
+
+        echo -e "\nReading ${BOLD}'${NAME}' script configuration${RESET}..."
+
+        DISABLED=$(config_field remote "$SCRIPT_ID" disabled)
+        if [[ "$DISABLED" == "true" ]]; then
+            echo -e "${YELLOW}The script is flagged as disabled; skipping....${RESET}"
+            COUNT_IGNORED=$((COUNT_IGNORED + 1))
+            if [[ -n "$LIST_IGNORED" ]]; then
+                LIST_IGNORED+=", "
+            fi
+            LIST_IGNORED+="${GREEN}$NAME${RESET}"
+
+            continue
+        fi
+
+        LOCATION="${TARGET}/${NAME}"
+
+        fetch_remote_script "$PROJECT" "$FILE_URL" "$LOCATION" true
+
+        if [[ "$IS_BLOCK" == true ]]; then
+            COMMAND=$(package_function_name "$LOCATION")
+        else
+            COMMAND="${REMOTE_LOCATION}/${LOCATION}"
+        fi
+
+        COMMAND+="${ARGUMENTS:+ $ARGUMENTS}" 
+        
+        write_script_invocation "$REPO_ID" "$COMMAND" "$EXPECT" "$RETURN"
+
+        COUNT_REMOTE=$((COUNT_REMOTE + 1))
+        if [[ -n "$LIST_REMOTE" ]]; then
+            LIST_REMOTE+=", "
+        fi
+        LIST_REMOTE+="${GREEN}$NAME${RESET}"
+
+        echo -e "${GREEN}Script loadded successfully.${RESET}"
+    done
+}
+
 load_local_scripts() {
+    local INLINE
+    local LOCATION
+    local COMMAND
+
     echo -e "${YELLOW}\nLoading local scipts...${RESET}"
 
-    SCRIPT_IDS=$(yq eval '.hooks.local.scripts[].id' "${INPUT_FILE}")
+    SCRIPT_IDS=$(config_ids local)
     if [[ -z "$SCRIPT_IDS" ]]; then
         echo -e "${GREEN}\nNo local scripts found.${RESET}"
         return
     fi
 
     for SCRIPT_ID in $SCRIPT_IDS; do
-        SCRIPT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .path" "${INPUT_FILE}")
+        SCRIPT=$(config_field local "$SCRIPT_ID" path)
+        INLINE=$(config_field local "$SCRIPT_ID" inline)
 
-        EXPECT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .expect" "${INPUT_FILE}")
-        RETURN=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .return" "${INPUT_FILE}")
+        if [[ "$SCRIPT" != "null" && "$INLINE" != "null" ]]; then
+            exit_error "Script '${SCRIPT_ID}' defines both 'path' and 'inline'."
+        fi
 
-        ARGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
-        FLAGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .flags[]" "${INPUT_FILE}" | tr '\n' ' ')
+        if [[ "$SCRIPT" == "null" && "$INLINE" == "null" ]]; then
+            exit_error "Script '${SCRIPT_ID}' must define 'path' or 'inline'."
+        fi
 
-        echo -e "\nReading ${BOLD}'${SCRIPT}' script${RESET}..."
+        EXPECT=$(config_field local "$SCRIPT_ID" expect)
+        RETURN=$(config_field local "$SCRIPT_ID" return)
 
-        DISABLED=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .disabled" "${INPUT_FILE}")
+        ARGS=$(config_list_field local "$SCRIPT_ID" args)
+        FLAGS=$(config_list_field local "$SCRIPT_ID" flags)
+
+        ARGUMENTS=$(format_arguments "$ARGS" "$FLAGS")
+
+        echo -e "\nReading ${BOLD}'${SCRIPT_ID}' script${RESET}..."
+
+        DISABLED=$(config_field local "$SCRIPT_ID" disabled)
         if [[ "$DISABLED" == "true" ]]; then
             echo -e "${YELLOW}The script is flagged as disabled; skipping...${RESET}"
             COUNT_IGNORED=$((COUNT_IGNORED + 1))
-            if [ -n "$LIST_IGNORED" ]; then
+            if [[ -n "$LIST_IGNORED" ]]; then
                 LIST_IGNORED+=", "
             fi
             LIST_IGNORED+="${GREEN}$SCRIPT_ID${RESET}"
@@ -690,44 +928,72 @@ load_local_scripts() {
             continue
         fi
 
-        if [ $IS_BLOCK == true ]; then
-            local_package_to_block "$SCRIPT" true
+        if [[ "${INLINE}" == "null" ]]; then
+            if [[ $IS_BLOCK == true ]]; then
+                block_add_local_package "$SCRIPT" true
+            fi
+
+            LOCATION="${WORKSPACE}/${SCRIPT}"
+
+            require_file "$LOCATION"
+            chmod +x "$LOCATION"
+
+            if [[ "$IS_BLOCK" == true ]]; then
+                SCRIPT=$(package_function_name "$SCRIPT")
+            fi
+
+            COMMAND="${SCRIPT}${ARGUMENTS:+ $ARGUMENTS}"
+        else
+            COMMAND=$(inline_command "$INLINE" "$ARGUMENTS")
         fi
 
-        local LOCATION="${WORKSPACE}/${SCRIPT}"
-
-        file_must_exists "$LOCATION"
-
-        log_script_execution "$SCRIPT_ID" "$SCRIPT" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" false
-
-        chmod +x "$LOCATION"
+        write_script_invocation "$SCRIPT_ID" "$COMMAND" "$EXPECT" "$RETURN"
 
         echo -e "${GREEN}Script loadded successfully.${RESET}"
 
         COUNT_LOCAL=$((COUNT_LOCAL + 1))
-        if [ -n "$LIST_LOCAL" ]; then
+        if [[ -n "$LIST_LOCAL" ]]; then
             LIST_LOCAL+=", "
         fi
         LIST_LOCAL+="${GREEN}$SCRIPT_ID${RESET}"
     done
 }
 
-file_must_exists() {
-    local FILE=$1
-    if [[ ! -f "$FILE" ]]; then
-        exit_error "File does not exist."
-    fi
+# ------ #
+# Report #
+# ------ #
+
+START_TIME=$(date +%s%3N)
+
+COUNT_SOURCES=0
+COUNT_LOCAL=0
+COUNT_REMOTE=0
+COUNT_IGNORED=0
+
+LIST_SOURCES=""
+LIST_LOCAL=""
+LIST_REMOTE=""
+LIST_IGNORED=""
+
+print_build_summary() {
+    END_TIME=$(date +%s%3N)
+    TIME=$((END_TIME - START_TIME))
+
+    echo -e "[${BOLD}$COUNT_REMOTE${RESET}] Remote scripts: $LIST_REMOTE"
+    echo -e "[${BOLD}$COUNT_SOURCES${RESET}] Sources: $LIST_SOURCES"
+    echo -e "[${BOLD}$COUNT_LOCAL${RESET}] Local scripts: $LIST_LOCAL"
+    echo -e "[${BOLD}$COUNT_IGNORED${RESET}] Ignored scripts: $LIST_IGNORED"
+
+    echo -e "\n${YELLOW}Execution time: ${TIME} ms${RESET}"
+
+    echo ""
 }
 
-block_separator() {
-    echo -e "\n------------------------------------------------------------------------------------------------"
-}
+# ======= #
+# ACTIONS #
+# ======= #
 
-# ----------------- #
-# STARTUP FUNCTIONS #
-# ----------------- #
-
-update_installer() {
+action_update() {
     local VERSION=$1
 
     REFERENCE="heads/main"
@@ -766,13 +1032,13 @@ update_installer() {
 
     touch "$SCRIPT"
 
-    clean_output "$SCRIPT"
+    truncate_file "$SCRIPT"
 
     echo "$CONTENT" >> "${SCRIPT}"
     chmod +x "$SCRIPT"
 }
 
-pull_source() {
+action_pull() {
     local SOURCE=$1
 
     local TAG="${SOURCE##*:}"
@@ -786,135 +1052,140 @@ pull_source() {
 
     echo -e "\n${GREEN}Downloading script ${NAME}...${RESET}\n"
 
-    fetch_write_remote_file "$PROJECT" "$FILE_URL" "$NAME" 0
+    fetch_remote_script "$PROJECT" "$FILE_URL" "$NAME" false
 }
 
-# ----------- #
-# CONFIG FILE #
-# ----------- #
+action_sync() {
+    local PROJECT_VERSION="$1"
 
-if [[ "$EXECUTE_SYNC" == true ]]; then
-    sync_config_tags "$SYNC_TAG"
-    exit 0
-fi
+    echo -e "${BOLD}\nSyncing tags...${RESET}"
 
-mkdir -p "$(dirname "$OUTPUT_FILE")"
-touch "$OUTPUT_FILE"
+    if [[ -z "$PROJECT_VERSION" ]]; then
+        echo -e "${BOLD}\nFetching project version from remote...\n${RESET}"
+        echo -e "${YELLOW} - Remote source: $_REMOTE_DATA${RESET}"
 
-# ----------- #
-# HOOKS STATE #
-# ----------- #
+        if ! CONTENT=$(curl -sf "$_REMOTE_DATA") ; then
+            exit_error "Failed to retrieve script from GitHub."
+        fi
 
-if [[ "$DISABLE_HOOK_STATUS" != -1 ]]; then
-    update_hooks_state
-    exit 0
-fi
+        PROJECT_VERSION=$(grep -A 5 '^\[project\]' <<< "$CONTENT" | grep '^version' | head -n 1 | cut -d'"' -f2)
+    fi
 
-chmod +x "$OUTPUT_FILE"
+    echo -e "${YELLOW} - Detected version: $PROJECT_VERSION${RESET}"
 
-# ----------------- #
-# BUILDING PROCCESS #
-# ----------------- #
+    sed -i "/origin: https:\/\/github.com\/Rafael24595\/bash-hooks/{n; s/tag: .*/tag: $PROJECT_VERSION/}" "$INPUT_FILE"
 
-if [[ "$EXECUTE_UPDATE" == true ]]; then
-    update_installer "$SOURCE_UPDATE_VERSION"
-    exit 0
-fi
+    echo -e "${GREEN}\nTags updated to $PROJECT_VERSION in $INPUT_FILE.${RESET}\n"
+}
 
-if [[ "$EXECUTE_PULL" == true ]]; then
-    pull_source "$SOURCE_PULL_PACKAGE"
+action_status() {
+    if (( ${#SCRIPT_STATES[@]} > 0 )); then
+        set_script_states
+    else
+        set_global_hook_state
+    fi
+}
 
-    echo -e "\n${BOLD}The package has been downloaded successfully.${RESET}\n"
+action_build() {
+    config_load
 
-    execution_resume
+    prepare_build_file
 
-    exit 0
-fi
+    if [[ "$IS_TEST" == true ]]; then
+        echo -e "\n${YELLOW}${BOLD}Executing in test mode, script will be mounted in '${RESET}${GREEN}${BOLD}${OUTPUT_FILE}${RESET}${YELLOW}${BOLD}'.${RESET}"
+    fi
 
-file_must_exists "$INPUT_FILE"
+    {
+        echo "#!/bin/bash"
+        echo -e "\n# Color codes"
+        echo -e "BOLD=\"\\\033[1m\""
+        echo -e "YELLOW=\"\\\033[0;33m\""
+        echo -e "RESET=\"\\\033[0m\""
+        echo -e "\nDISABLED_HOOK=$DEFAULT_DISABLED_HOOK"
+        echo -e "if [[ \"\${DISABLED_HOOK}\" == true ]]; then"
+        echo -e "   echo -e \"\${YELLOW}\${BOLD}Warning, the hook disabled.\"\${RESET}"
+        echo -e "   exit 0"
+        echo -e "fi"
+    } >> "$BUILD_FILE"
 
-if ! YAML_EVAL=$(yq eval '.' "$INPUT_FILE" 2>&1); then
-    exit_error "Invalid YAML format: $YAML_EVAL"
-fi
+    echo -e "\n${BOLD}Building ${HOOK_MODE} hook...${RESET}"
 
-clean_output "$OUTPUT_FILE"
+    print_separator
 
-if [[ "$IS_TEST" == true ]]; then
-    echo -e "\n${YELLOW}${BOLD}Executing in test mode, script will be mounted in '${RESET}${GREEN}${BOLD}${OUTPUT_FILE}${RESET}${YELLOW}${BOLD}'.${RESET}"
-fi
+    echo -e "\n# <-- SOURCES -->" >> "$BUILD_FILE"
 
-{
-    echo "#!/bin/bash"
-    echo -e "\n# Color codes"
-    echo -e "BOLD=\"\\\033[1m\""
-    echo -e "YELLOW=\"\\\033[0;33m\""
-    echo -e "RESET=\"\\\033[0m\""
-    echo -e "\nDISABLED_HOOK=$DISABLE_HOOK"
-    echo -e "if [ \"\${DISABLED_HOOK}\" == true ]; then"
-    echo -e "   echo -e \"\${YELLOW}\${BOLD}Warning, the hook disabled.\"\${RESET}"
-    echo -e "   exit 0"
-    echo -e "fi"
-} >> "$OUTPUT_FILE"
+    load_sources
+    print_separator
 
-echo -e "\n${BOLD}Building pre-commit hook...${RESET}"
+    echo -e "\n# <-- REPOSITORY SCRIPTS -->" >> "$BUILD_FILE"
+    echo -e "\nprintf \"\${BOLD}\\\\nRepository scripts: \\\\n\${RESET}\"" >> "$BUILD_FILE"
 
-block_separator
+    load_remote_scripts
+    print_separator
 
+    echo -e "\n# <-- LOCAL SCRIPTS -->" >> "$BUILD_FILE"
+    echo -e "\nprintf \"\${BOLD}\\\\nLocal scripts: \\\\n\${RESET}\"" >> "$BUILD_FILE"
 
-# ------------ #
-# LOAD SOURCES #
-# ------------ #
+    load_local_scripts
+    print_separator
 
-echo -e "\n# <-- SOURCES -->" >> "$OUTPUT_FILE"
+    if [[ $IS_BLOCK == true ]]; then
+        OUTPUT_CONTENT=$(<"$BUILD_FILE")
+        OUTPUT_CONTENT=${OUTPUT_CONTENT//"#!/bin/sh"/$'\n'"### ### ### Source script ### ### ###"}
+        BLOCK_CONTENT="$BLOCK_CONTENT"$'\n'"$OUTPUT_CONTENT"
 
-load_sources
+        truncate_file "$BUILD_FILE"
 
-block_separator
+        echo "$BLOCK_CONTENT" >> "$BUILD_FILE"
+    fi
 
+    if ! bash -n "$BUILD_FILE"; then
+        exit_error "Generated hook has syntax errors; the existing hook was kept."
+    fi
 
-# --------------------#
-# LOAD REMOTE SCRIPTS #
-# ------------------- #
+    publish_build_file
 
-echo -e "\n# <-- REPOSITORY SCRIPTS -->" >> "$OUTPUT_FILE"
-echo -e "\nprintf \"\${BOLD}\\\\nRepository scripts: \\\\n\${RESET}\"" >> "$OUTPUT_FILE"
+    echo -e "\n${BOLD}Hook has been building successfully.${RESET}\n"
 
-load_remote_scripts
+    print_build_summary
+}
 
-block_separator
+# ==== #
+# MAIN #
+# ==== #
 
+main() {
+    parse_arguments "$@"
 
-# ------------------ #
-# LOAD LOCAL SCRIPTS #
-# ------------------ #
+    OUTPUT_FILE="${WORKSPACE}/${OUTPUT_FILE}"
 
-echo -e "\n# <-- LOCAL SCRIPTS -->" >> "$OUTPUT_FILE"
-echo -e "\nprintf \"\${BOLD}\\\\nLocal scripts: \\\\n\${RESET}\"" >> "$OUTPUT_FILE"
+    if [[ "$EXECUTE_UPDATE" == true ]]; then
+        action_update "$UPDATE_VERSION"
+        exit 0
+    fi
 
-load_local_scripts
+    if [[ "$EXECUTE_PULL" == true ]]; then
+        action_pull "$PULL_TARGET"
 
-block_separator
+        echo -e "\n${BOLD}The package has been downloaded successfully.${RESET}\n"
 
+        print_build_summary
+        exit 0
+    fi
 
-# --------------------- #
-# BUILD SCRIPT AS BLOCK #
-# --------------------- #
+    if [[ "$EXECUTE_SYNC" == true ]]; then
+        resolve_input_file
+        action_sync "$SYNC_TAG"
+        exit 0
+    fi
 
-if [ $IS_BLOCK == true ]; then
-    OUTPUT_CONTENT=$(<"$OUTPUT_FILE")
-    OUTPUT_CONTENT=${OUTPUT_CONTENT//"#!/bin/sh"/$'\n'"### ### ### Source script ### ### ###"}
-    BLOCK_PACKAGES="$BLOCK_PACKAGES"$'\n'"$OUTPUT_CONTENT"
+    if [[ "$EXECUTE_STATUS" == true ]]; then
+        action_status || exit 1
+        exit 0
+    fi
 
-    clean_output "$OUTPUT_FILE"
+    resolve_input_file
+    action_build
+}
 
-    echo "$BLOCK_PACKAGES" >> "$OUTPUT_FILE"
-fi
-
-
-# ---------------- #
-# EXECUTION RESUME #
-# ---------------- #
-
-echo -e "\n${BOLD}Hook has been building successfully.${RESET}\n"
-
-execution_resume
+main "$@"
