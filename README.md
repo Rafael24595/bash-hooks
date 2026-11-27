@@ -171,6 +171,14 @@ These options change an existing hook in place and do not need the configuration
 | `--pull=<script>:<tag>` | Downloads a remote script at the specified version. |
 | `--sync[=<tag>]` | Sets the tag of every `bash-hooks` remote script in the input file to the specified version, or to the latest version if no tag is provided. The input file is the one selected by `--workspace` and `--input`. |
 
+### Exit codes
+
+| Exit code | Meaning |
+| --- | --- |
+| `0` | The command succeeded. |
+| `1` | The command failed, for example because of an invalid configuration, a missing hook or a failed download. |
+| `2` | Invalid or incompatible options. |
+
 Examples:
 
 ```bash
