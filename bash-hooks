@@ -568,24 +568,53 @@ block_add_local_package() {
 # Hook writer #
 # ----------- #
 
+inline_command() {
+    local CODE=$1
+    local ARGS=$2
+
+    local LINE
+
+    printf '(\n'
+
+    if [[ -n "$ARGS" ]]; then
+        printf '    set -- %s\n' "$ARGS"
+    fi
+    
+    while IFS= read -r LINE; do
+        printf '    %s\n' "$LINE"
+    done <<< "$CODE"
+
+    printf '  )'
+}
+
+format_arguments() {
+    local ARGS=$1
+    local FLAGS=$2
+
+    local FLAG
+    local RESULT
+
+    ARGS="${ARGS#"${ARGS%%[![:space:]]*}"}"
+    ARGS="${ARGS%"${ARGS##*[![:space:]]}"}"
+
+    RESULT="$ARGS"
+
+    for FLAG in $FLAGS; do
+        RESULT+="${RESULT:+ }--${FLAG}"
+    done
+
+    printf '%s' "$RESULT"
+}
+
 write_script_invocation() {
     local SCRIPT_ID=$1
-    local SCRIPT=$2
+    local COMMAND=$2
     local EXPECT=$3
     local RETURN=$4
-    local ARGS=$5
-    local FLAGS=$6
-    local IS_REMOTE=$7
 
     local HOOK_NAME
     local LOG_DIRECTION="ne"
     local LOG_RETURN=1
-
-    if [[ "$IS_BLOCK" == true ]]; then
-        SCRIPT=$(package_function_name "$SCRIPT")
-    elif [[ "$IS_REMOTE" == true ]]; then
-        SCRIPT="$REMOTE_LOCATION/$SCRIPT"
-    fi
 
     if [[ "$EXPECT" == "true" ]]; then
         LOG_DIRECTION="eq"
@@ -595,33 +624,14 @@ write_script_invocation() {
         LOG_RETURN=0
     fi
 
-    local LOG_FLAGS=""
-    for flag in $FLAGS; do
-        if [[ -n "$LOG_FLAGS" ]]; then
-            LOG_FLAGS+=" "
-        fi
-        LOG_FLAGS+="--$flag"
-    done
-
-    ARGS="${ARGS#"${ARGS%%[![:space:]]*}"}"
-    ARGS="${ARGS%"${ARGS##*[![:space:]]}"}"
-
-    if [[ -n "$ARGS" ]]; then
-        ARGS=" $ARGS"
-    fi
-
-    if [[ -n "$LOG_FLAGS" ]]; then
-        LOG_FLAGS=" $LOG_FLAGS"
-    fi
-
     HOOK_NAME=$(hook_variable_name "$SCRIPT_ID")
 
     {
         echo
         echo -e "${HOOK_NAME}=true"
         echo -e "if [[ \"\${$HOOK_NAME}\" == true ]]; then"
-        echo -e "  printf \"\${BOLD}\\\\nExecuting '${SCRIPT}' script...\${RESET}\\\\n\""
-        echo -e "  $SCRIPT$ARGS$LOG_FLAGS"
+        echo -e "  printf \"\${BOLD}\\\\nExecuting '${SCRIPT_ID}' script...\${RESET}\\\\n\""
+        printf '  %s\n' "$COMMAND"
         echo -e "  EXIT_CODE=\$?"
         echo -e "  if [[ \$EXIT_CODE -eq 2 ]]; then"
         echo -e "      exit 1"
@@ -666,6 +676,10 @@ load_sources() {
 }
 
 load_remote_scripts() {
+    local PROJECT
+    local LOCATION
+    local COMMAND
+
     echo -e "\n${YELLOW}Loading remote scipts...${RESET}"
 
     REPO_IDS=$(yq eval '.hooks.remote.repos[].id' "${INPUT_FILE}")
@@ -685,13 +699,16 @@ load_remote_scripts() {
 
         ARGS=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
         FLAGS=$(yq e ".hooks.remote.repos[] | select(.id == \"${REPO_ID}\") | .flags[]" "${INPUT_FILE}" | tr '\n' ' ')
+
+        ARGUMENTS=$(format_arguments "$ARGS" "$FLAGS")
+
         FILE_URL=""
 
         if [[ $NAME != *.sh ]]; then
             exit_error "Only Bash scripts are supported so far."
         fi
 
-        local PROJECT=""
+        PROJECT=""
         if [[ "$ORIGIN" == https://github.com* ]]; then
             PROJECT="${ORIGIN#https://github.com/}"
             FILE_URL="https://raw.githubusercontent.com/${PROJECT}/refs/tags/${TAG}/${TARGET}/${NAME}"
@@ -713,11 +730,19 @@ load_remote_scripts() {
             continue
         fi
 
-        local LOCATION="${TARGET}/${NAME}"
+        LOCATION="${TARGET}/${NAME}"
 
         fetch_remote_script "$PROJECT" "$FILE_URL" "$LOCATION" true
+
+        if [[ "$IS_BLOCK" == true ]]; then
+            COMMAND=$(package_function_name "$LOCATION")
+        else
+            COMMAND="${REMOTE_LOCATION}/${LOCATION}"
+        fi
+
+        COMMAND+="${ARGUMENTS:+ $ARGUMENTS}" 
         
-        write_script_invocation "$REPO_ID" "$LOCATION" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" true
+        write_script_invocation "$REPO_ID" "$COMMAND" "$EXPECT" "$RETURN"
 
         COUNT_REMOTE=$((COUNT_REMOTE + 1))
         if [[ -n "$LIST_REMOTE" ]]; then
@@ -730,6 +755,10 @@ load_remote_scripts() {
 }
 
 load_local_scripts() {
+    local INLINE
+    local LOCATION
+    local COMMAND
+
     echo -e "${YELLOW}\nLoading local scipts...${RESET}"
 
     SCRIPT_IDS=$(yq eval '.hooks.local.scripts[].id' "${INPUT_FILE}")
@@ -740,6 +769,15 @@ load_local_scripts() {
 
     for SCRIPT_ID in $SCRIPT_IDS; do
         SCRIPT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .path" "${INPUT_FILE}")
+        INLINE=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .inline" "${INPUT_FILE}")
+
+        if [[ "$SCRIPT" != "null" && "$INLINE" != "null" ]]; then
+            exit_error "Script '${SCRIPT_ID}' defines both 'path' and 'inline'."
+        fi
+
+        if [[ "$SCRIPT" == "null" && "$INLINE" == "null" ]]; then
+            exit_error "Script '${SCRIPT_ID}' must define 'path' or 'inline'."
+        fi
 
         EXPECT=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .expect" "${INPUT_FILE}")
         RETURN=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .return" "${INPUT_FILE}")
@@ -747,7 +785,9 @@ load_local_scripts() {
         ARGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .args[]" "${INPUT_FILE}" | tr '\n' ' ')
         FLAGS=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .flags[]" "${INPUT_FILE}" | tr '\n' ' ')
 
-        echo -e "\nReading ${BOLD}'${SCRIPT}' script${RESET}..."
+        ARGUMENTS=$(format_arguments "$ARGS" "$FLAGS")
+
+        echo -e "\nReading ${BOLD}'${SCRIPT_ID}' script${RESET}..."
 
         DISABLED=$(yq e ".hooks.local.scripts[] | select(.id == \"${SCRIPT_ID}\") | .disabled" "${INPUT_FILE}")
         if [[ "$DISABLED" == "true" ]]; then
@@ -761,17 +801,26 @@ load_local_scripts() {
             continue
         fi
 
-        if [[ $IS_BLOCK == true ]]; then
-            block_add_local_package "$SCRIPT" true
+        if [[ "${INLINE}" == "null" ]]; then
+            if [[ $IS_BLOCK == true ]]; then
+                block_add_local_package "$SCRIPT" true
+            fi
+
+            LOCATION="${WORKSPACE}/${SCRIPT}"
+
+            require_file "$LOCATION"
+            chmod +x "$LOCATION"
+
+            if [[ "$IS_BLOCK" == true ]]; then
+                SCRIPT=$(package_function_name "$SCRIPT")
+            fi
+
+            COMMAND="${SCRIPT}${ARGUMENTS:+ $ARGUMENTS}"
+        else
+            COMMAND=$(inline_command "$INLINE" "$ARGUMENTS")
         fi
 
-        local LOCATION="${WORKSPACE}/${SCRIPT}"
-
-        require_file "$LOCATION"
-
-        write_script_invocation "$SCRIPT_ID" "$SCRIPT" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" false
-
-        chmod +x "$LOCATION"
+        write_script_invocation "$SCRIPT_ID" "$COMMAND" "$EXPECT" "$RETURN"
 
         echo -e "${GREEN}Script loadded successfully.${RESET}"
 

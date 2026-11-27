@@ -123,6 +123,37 @@ given_offline() {
     chmod +x "$STUBS/curl"
 }
 
+# Replaces curl with a stub that serves the given script for any URL.
+given_remote_script() {
+    local body=$1
+
+    printf '#!/bin/bash\nprintf "%%s\\n" %q\n' "$body" > "$STUBS/curl"
+    chmod +x "$STUBS/curl"
+}
+
+# Config with a single remote script (tools/sh/remote.sh).
+# write_remote_config [args...]
+write_remote_config() {
+    {
+        echo "hooks:"
+        echo "  remote:"
+        echo "    repos:"
+        echo "      - id: remote-check"
+        echo "        origin: https://github.com/Rafael24595/bash-hooks"
+        echo "        tag: 0.0.0"
+        echo "        target: tools/sh"
+        echo "        name: remote.sh"
+
+        if (( $# > 0 )); then
+            echo "        args:"
+            local arg
+            for arg in "$@"; do
+                echo "          - $arg"
+            done
+        fi
+    } > pre-commit-build.yml
+}
+
 run_hook() {
     ./.git/hooks/pre-commit > /dev/null 2>&1
 }
@@ -315,6 +346,265 @@ test_generated_hook_fails_when_a_script_fails() {
     if run_hook; then
         fail "hook succeeded although a script failed"
     fi
+}
+
+# -------------- #
+# INLINE SCRIPTS #
+# -------------- #
+
+test_inline_script_runs() {
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: inline-check
+        inline: |
+          touch inline-ran
+EOF
+
+    run_sut
+
+    assert_status 0
+    assert_file_contains .git/hooks/pre-commit "HOOK_INLINE_CHECK=true"
+    run_hook || fail "hook failed although the inline script succeeded"
+    assert_file_exists inline-ran
+}
+
+test_inline_script_runs_every_line() {
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: inline-check
+        inline: |
+          touch first
+          touch second
+EOF
+
+    run_sut
+    assert_status 0
+
+    run_hook || fail "hook failed although the inline script succeeded"
+    assert_file_exists first
+    assert_file_exists second
+}
+
+test_failing_inline_script_fails_hook() {
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: inline-check
+        inline: |
+          false
+EOF
+
+    run_sut
+    assert_status 0
+
+    if run_hook; then
+        fail "hook succeeded although the inline script failed"
+    fi
+}
+
+test_inline_script_exit_only_ends_that_script() {
+    mkdir -p scripts
+    printf '#!/bin/bash\ntouch after-ran\n' > scripts/after.sh
+    chmod +x scripts/after.sh
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: inline-check
+        inline: |
+          exit 0
+      - id: after-check
+        path: ./scripts/after.sh
+EOF
+
+    run_sut
+    assert_status 0
+
+    run_hook || fail "hook failed"
+    assert_file_exists after-ran
+}
+
+test_inline_script_is_written_verbatim() {
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: inline-check
+        inline: |
+          printf '%s' 'a\tb' > out.txt
+EOF
+
+    run_sut
+    assert_status 0
+
+    run_hook || fail "hook failed although the inline script succeeded"
+    assert_file_equals out.txt 'a\tb'
+}
+
+test_inline_script_receives_args_and_flags() {
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: inline-check
+        inline: |
+          printf '%s\n' "$@" > args.txt
+        args:
+          - first
+        flags:
+          - staged
+EOF
+
+    run_sut
+    assert_status 0
+
+    run_hook || fail "hook failed although the inline script succeeded"
+    assert_file_equals args.txt $'first\n--staged'
+}
+
+test_inline_script_in_block_mode() {
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: inline-check
+        inline: |
+          touch inline-ran
+EOF
+
+    run_sut --block
+    assert_status 0
+
+    run_hook || fail "hook failed although the inline script succeeded"
+    assert_file_exists inline-ran
+}
+
+test_inline_state_can_be_toggled() {
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: inline-check
+        inline: |
+          false
+EOF
+    run_sut
+
+    run_sut --disable=inline-check
+
+    assert_status 0
+    run_hook || fail "disabled inline script still runs"
+}
+
+test_script_without_path_or_inline_fails() {
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: empty-check
+EOF
+
+    run_sut
+
+    assert_status 1
+    assert_contains "$STDERR" "must define 'path' or 'inline'" "stderr"
+    assert_file_missing .git/hooks/pre-commit
+}
+
+test_script_with_path_and_inline_fails() {
+    write_script scripts/ok.sh 0
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: both-check
+        path: ./scripts/ok.sh
+        inline: |
+          true
+EOF
+
+    run_sut
+
+    assert_status 1
+    assert_contains "$STDERR" "defines both 'path' and 'inline'" "stderr"
+    assert_file_missing .git/hooks/pre-commit
+}
+
+# Regression guard: a generated hook with a syntax error must never replace
+# a working one.
+test_build_with_invalid_inline_syntax_keeps_existing_hook() {
+    given_existing_hook
+    cat > pre-commit-build.yml <<'EOF'
+hooks:
+  local:
+    scripts:
+      - id: broken-check
+        inline: |
+          if true; then
+EOF
+
+    run_sut
+
+    assert_status 1
+    assert_file_equals .git/hooks/pre-commit "$PREVIOUS_HOOK"
+    assert_file_missing .git/hooks/pre-commit.tmp
+}
+
+# -------------- #
+# REMOTE SCRIPTS #
+# -------------- #
+
+test_remote_script_is_downloaded_and_runs() {
+    given_remote_script $'#!/bin/bash\n\ntouch remote-ran'
+    write_remote_config
+
+    run_sut
+
+    assert_status 0
+    assert_file_exists .remote-scripts/tools/sh/remote.sh
+    assert_executable .remote-scripts/tools/sh/remote.sh
+    run_hook || fail "hook failed although the remote script succeeded"
+    assert_file_exists remote-ran
+}
+
+test_remote_script_receives_args() {
+    given_remote_script $'#!/bin/bash\n\nprintf \'%s\\n\' "$@" > args.txt'
+    write_remote_config first second
+
+    run_sut
+    assert_status 0
+
+    run_hook || fail "hook failed although the remote script succeeded"
+    assert_file_equals args.txt $'first\nsecond'
+}
+
+test_remote_script_in_block_mode() {
+    given_remote_script $'#!/bin/bash\n\ntouch remote-ran'
+    write_remote_config
+
+    run_sut --block
+
+    assert_status 0
+    assert_file_missing .remote-scripts/tools/sh/remote.sh
+    run_hook || fail "hook failed although the remote script succeeded"
+    assert_file_exists remote-ran
+}
+
+test_failing_remote_download_keeps_existing_hook() {
+    given_existing_hook
+    given_offline
+    write_remote_config
+
+    run_sut
+
+    assert_status 1
+    assert_contains "$STDERR" "Failed to retrieve" "stderr"
+    assert_file_equals .git/hooks/pre-commit "$PREVIOUS_HOOK"
 }
 
 # ----------- #

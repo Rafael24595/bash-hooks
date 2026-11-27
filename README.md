@@ -33,9 +33,23 @@ Start from the [configuration template](https://github.com/Rafael24595/bash-hook
 
 ### Structure
 
+- `schema`: version of the configuration format. See [Schema version](#schema-version).
 - `hooks` (**required**)
   - `remote.repos`: list of remote script repositories.
   - `local.scripts`: list of local scripts.
+
+### Schema version
+
+`schema` declares which version of the configuration format the file uses, so that an installer can reject a file it does not understand instead of generating a broken hook. It is unrelated to the `tag` of remote scripts and to the project version.
+
+| Schema | Changes |
+| --- | --- |
+| `1` | Initial format. Used when `schema` is not specified. |
+| `2` | Adds [inline scripts](#inline-scripts). |
+
+`schema` must be an integer. If it is newer than the one supported by the installer, the build fails without changing the existing hook; run `bash-hooks --update` to get a newer installer.
+
+Installers released before the `schema` field ignore it, so they cannot reject newer files.
 
 ### Common script fields
 
@@ -61,9 +75,38 @@ These fields are used by remote and local script entries:
 
 ### Local script fields
 
+Each local script defines either `path` or `inline`, never both. The build fails if a script defines neither or both.
+
 | Field | Description |
 | --- | --- |
-| `path` | Path to the local script. |
+| `path` | Path to the local script, relative to the workspace root. |
+| `inline` | Shell code to run directly from the hook, without a separate script file. See [Inline scripts](#inline-scripts). |
+
+### Inline scripts
+
+Short commands can be written directly in the configuration file with `inline`, usually as a YAML block scalar (`|`):
+
+```yaml
+schema: 2
+
+hooks:
+  local:
+    scripts:
+      - id: run-sh-tests
+        inline: |
+          ./test/bash-hooks.test.sh
+```
+
+Inline code behaves like a script:
+
+- It runs in a subshell, so `exit` only ends that script and the hook continues with the next one.
+- Its exit code is evaluated with `expect` and `return`, and exit code `2` fails the hook, as for any other script.
+- `args` and `flags` are available as `"$@"`.
+- It is written to the hook exactly as typed: quotes, `$` and backslashes are not modified.
+- It runs from the workspace root, like local scripts.
+- It requires `schema: 2` or later.
+
+Inline code is indented inside the generated hook, so heredocs (`<<EOF`) are not supported. Use a script with `path` when more complex code is needed.
 
 See the [configuration template](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yml) for a complete example.
 
