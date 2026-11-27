@@ -934,7 +934,7 @@ action_build() {
         echo -e "fi"
     } >> "$BUILD_FILE"
 
-    echo -e "\n${BOLD}Building pre-commit hook...${RESET}"
+    echo -e "\n${BOLD}Building ${HOOK_MODE} hook...${RESET}"
 
     print_separator
 
