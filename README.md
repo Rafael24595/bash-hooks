@@ -120,7 +120,7 @@ Without a tag, remote installation downloads the latest version available from t
 
 ## CLI Reference
 
-By default, the `bash-hooks`script is located in the same workspace as the installer, but it can also be installed globally.
+By default, the `bash-hooks` script is located in the same workspace as the installer, but it can also be installed globally.
 
 ### Commands and options
 
