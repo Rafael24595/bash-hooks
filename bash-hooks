@@ -965,6 +965,10 @@ action_build() {
         echo "$BLOCK_CONTENT" >> "$BUILD_FILE"
     fi
 
+    if ! bash -n "$BUILD_FILE"; then
+        exit_error "Generated hook has syntax errors; the existing hook was kept."
+    fi
+
     publish_build_file
 
     echo -e "\n${BOLD}Hook has been building successfully.${RESET}\n"
