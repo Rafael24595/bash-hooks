@@ -66,6 +66,10 @@ These fields are used by remote and local script entries:
 
 See the [configuration template](https://github.com/Rafael24595/bash-hooks/blob/main/pre-commit-build.template.yml) for a complete example.
 
+### Hook generation
+
+The hook is built in a temporary file next to the final one and only replaces the existing hook once the build succeeds and its syntax has been checked with `bash -n`. A failed build, for example because of an invalid configuration, a missing local script or a failed download, always keeps the previous hook.
+
 ### Script exit codes
 
 Scripts can use the following exit codes to control hook execution:
