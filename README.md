@@ -150,12 +150,19 @@ bash-hooks 0.20.0 (project 0.25.0)
 | `-b`, `--block` | Generates a single-file script without imports. |
 | `-t`, `--test` | Runs the script in test mode, placing it in the remote-scripts directory so Git will not use it as a hook. |
 
-**Packages**
+**Hook state**
 
 | Option | Description |
 | --- | --- |
-| `-d`, `--disable[=<id>[,<id>...]]` | Disables the given script IDs, or the whole hook if none is given. If the hook does not exist, it is created disabled. |
-| `-e`, `--enable[=<id>[,<id>...]]` | Enables the given script IDs, or the whole hook if none is given. If the hook does not exist, it is created enabled. |
+| `-d`, `--disable[=<id>[,<id>...]]` | Disables the given script IDs, or the whole hook if none is given. |
+| `-e`, `--enable[=<id>[,<id>...]]` | Enables the given script IDs, or the whole hook if none is given. |
+
+These options change an existing hook in place and do not need the configuration file:
+
+- The hook must already exist; otherwise the command fails. Generate it first by running `bash-hooks`.
+- An unknown script ID fails without changing the hook.
+- Different scripts can be enabled and disabled in the same call (`--enable=a --disable=b`).
+- `--enable` and `--disable` for the whole hook cannot be combined, and neither can be combined with per-script options. Both cases exit with code `2`.
 
 **Remote**
 
@@ -172,6 +179,9 @@ Examples:
 
 # Disable a selected script
 ./bash-hooks --disable=run-linter
+
+# Enable and disable different scripts at once
+./bash-hooks --enable=run-linter --disable=check-staged
 
 # Select a workspace and configuration file
 ./bash-hooks --workspace=../other_project/my_project
