@@ -1,0 +1,8 @@
+hooks:
+  remote:
+
+  local:
+    scripts:
+      - id: run-sh-tests
+        inline: |
+          ./test/bash-hooks.test.sh
