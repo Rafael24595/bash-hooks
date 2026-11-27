@@ -431,7 +431,7 @@ resolve_remote_sources() {
             LOADED_SOURCES["$FIX_SOURCE"]=1
 
             COUNT_SOURCES=$((COUNT_SOURCES + 1))
-            if [ -n "$LIST_SOURCES" ]; then
+            if [[ -n "$LIST_SOURCES" ]]; then
                 LIST_SOURCES+=", "
             fi
             LIST_SOURCES+="${GREEN}$FILE_SOURCE${RESET}"
@@ -464,7 +464,7 @@ fetch_remote_script() {
     resolve_remote_sources "$NAME" "$PROJECT" "$TAG" "${CONTENT}"
     CONTENT="${LAST_CONTENT}"
 
-    if [ $IS_BLOCK == true ]; then
+    if [[ $IS_BLOCK == true ]]; then
         block_add_package "$NAME" "$CONTENT" "$IS_MAIN"
     else
         SCRIPT="${WORKSPACE}/${REMOTE_LOCATION}/${NAME}"
@@ -619,14 +619,14 @@ write_script_invocation() {
     {
         echo
         echo -e "${HOOK_NAME}=true"
-        echo -e "if [ \"\${$HOOK_NAME}\" == true ]; then"
+        echo -e "if [[ \"\${$HOOK_NAME}\" == true ]]; then"
         echo -e "  printf \"\${BOLD}\\\\nExecuting '${SCRIPT}' script...\${RESET}\\\\n\""
         echo -e "  $SCRIPT$ARGS$LOG_FLAGS"
         echo -e "  EXIT_CODE=\$?"
-        echo -e "  if [ \$EXIT_CODE -eq 2 ]; then"
+        echo -e "  if [[ \$EXIT_CODE -eq 2 ]]; then"
         echo -e "      exit 1"
         echo -e "  fi"
-        echo -e "  if [ \$EXIT_CODE -${LOG_DIRECTION} 0 ]; then"
+        echo -e "  if [[ \$EXIT_CODE -${LOG_DIRECTION} 0 ]]; then"
         echo -e "      exit ${LOG_RETURN}"
         echo -e "  fi"
         echo -e "  printf \"\${BOLD}\\\\n <-----------------> \\\\n\${RESET}\""
@@ -656,7 +656,7 @@ load_sources() {
         chmod +x "$SOURCE"
 
         COUNT_SOURCES=$((COUNT_SOURCES + 1))
-        if [ -n "$LIST_SOURCES" ]; then
+        if [[ -n "$LIST_SOURCES" ]]; then
             LIST_SOURCES+=", "
         fi
         LIST_SOURCES+="${GREEN}$SOURCE${RESET}"
@@ -705,7 +705,7 @@ load_remote_scripts() {
         if [[ "$DISABLED" == "true" ]]; then
             echo -e "${YELLOW}The script is flagged as disabled; skipping....${RESET}"
             COUNT_IGNORED=$((COUNT_IGNORED + 1))
-            if [ -n "$LIST_IGNORED" ]; then
+            if [[ -n "$LIST_IGNORED" ]]; then
                 LIST_IGNORED+=", "
             fi
             LIST_IGNORED+="${GREEN}$NAME${RESET}"
@@ -720,7 +720,7 @@ load_remote_scripts() {
         write_script_invocation "$REPO_ID" "$LOCATION" "$EXPECT" "$RETURN" "$ARGS" "$FLAGS" true
 
         COUNT_REMOTE=$((COUNT_REMOTE + 1))
-        if [ -n "$LIST_REMOTE" ]; then
+        if [[ -n "$LIST_REMOTE" ]]; then
             LIST_REMOTE+=", "
         fi
         LIST_REMOTE+="${GREEN}$NAME${RESET}"
@@ -753,7 +753,7 @@ load_local_scripts() {
         if [[ "$DISABLED" == "true" ]]; then
             echo -e "${YELLOW}The script is flagged as disabled; skipping...${RESET}"
             COUNT_IGNORED=$((COUNT_IGNORED + 1))
-            if [ -n "$LIST_IGNORED" ]; then
+            if [[ -n "$LIST_IGNORED" ]]; then
                 LIST_IGNORED+=", "
             fi
             LIST_IGNORED+="${GREEN}$SCRIPT_ID${RESET}"
@@ -761,7 +761,7 @@ load_local_scripts() {
             continue
         fi
 
-        if [ $IS_BLOCK == true ]; then
+        if [[ $IS_BLOCK == true ]]; then
             block_add_local_package "$SCRIPT" true
         fi
 
@@ -776,7 +776,7 @@ load_local_scripts() {
         echo -e "${GREEN}Script loadded successfully.${RESET}"
 
         COUNT_LOCAL=$((COUNT_LOCAL + 1))
-        if [ -n "$LIST_LOCAL" ]; then
+        if [[ -n "$LIST_LOCAL" ]]; then
             LIST_LOCAL+=", "
         fi
         LIST_LOCAL+="${GREEN}$SCRIPT_ID${RESET}"
@@ -884,7 +884,7 @@ action_sync() {
 
     echo -e "${BOLD}\nSyncing tags...${RESET}"
 
-    if [ -z "$PROJECT_VERSION" ]; then
+    if [[ -z "$PROJECT_VERSION" ]]; then
         echo -e "${BOLD}\nFetching project version from remote...\n${RESET}"
         echo -e "${YELLOW} - Remote source: $_REMOTE_DATA${RESET}"
 
@@ -928,7 +928,7 @@ action_build() {
         echo -e "YELLOW=\"\\\033[0;33m\""
         echo -e "RESET=\"\\\033[0m\""
         echo -e "\nDISABLED_HOOK=$DEFAULT_DISABLED_HOOK"
-        echo -e "if [ \"\${DISABLED_HOOK}\" == true ]; then"
+        echo -e "if [[ \"\${DISABLED_HOOK}\" == true ]]; then"
         echo -e "   echo -e \"\${YELLOW}\${BOLD}Warning, the hook disabled.\"\${RESET}"
         echo -e "   exit 0"
         echo -e "fi"
@@ -955,7 +955,7 @@ action_build() {
     load_local_scripts
     print_separator
 
-    if [ $IS_BLOCK == true ]; then
+    if [[ $IS_BLOCK == true ]]; then
         OUTPUT_CONTENT=$(<"$BUILD_FILE")
         OUTPUT_CONTENT=${OUTPUT_CONTENT//"#!/bin/sh"/$'\n'"### ### ### Source script ### ### ###"}
         BLOCK_CONTENT="$BLOCK_CONTENT"$'\n'"$OUTPUT_CONTENT"
