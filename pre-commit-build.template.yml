@@ -36,3 +36,7 @@ hooks:
 
       - id: run-linter
         path: ./golang/sh/run-linter.sh
+      
+      - id: run-scripts-tests
+        inline: |
+          ./test/scripts.test.sh
