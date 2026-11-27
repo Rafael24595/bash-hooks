@@ -8,6 +8,7 @@
 - [Configuration](#configuration)
 - [Global Installation](#global-installation)
 - [CLI Reference](#cli-reference)
+- [Testing](#testing)
 - [Package Reference](#package-reference)
   - [Golang](#golang)
   - [Node.js](#nodejs)
@@ -211,6 +212,18 @@ Examples:
 # Point every bash-hooks remote script to the latest version
 ./bash-hooks --sync
 ```
+
+## Testing
+
+The installer has a behaviour test suite under `test/`, with no dependencies other than those of the installer itself:
+
+```bash
+./test/bash-hooks.test.sh                      # tests ./bash-hooks
+./test/bash-hooks.test.sh path/to/installer
+TEST_FILTER=inline ./test/bash-hooks.test.sh   # only tests whose name contains "inline"
+```
+
+Each test runs in its own temporary directory against a private copy of the installer, so the repository is never modified. Network access is not needed: `curl` is replaced by a stub.
 
 ## Package Reference
 
