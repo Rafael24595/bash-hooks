@@ -85,7 +85,7 @@ Exit code `2` is reserved by `bash-hooks` for argument validation errors and sho
 
 ## Global Installation
 
-The global installer (`install.sh`) installs `bash-hooks` in the user's local binary directory and adds its directory to `PATH`.
+The global installer (`installer.sh`) installs `bash-hooks` in the user's local binary directory and adds its directory to `PATH`.
 
 Default installation path:
 
