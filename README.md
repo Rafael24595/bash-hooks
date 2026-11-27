@@ -129,8 +129,15 @@ By default, the `bash-hooks` script is located in the same workspace as the inst
 | Option | Description |
 | --- | --- |
 | `-h`, `--help` | Displays help. |
-| `-v`, `--version` | Displays the current version. |
-| `-u`, `--update[=<tag>]` | Updates the script to the specified tag, or to the latest version if no tag is provided. |
+| `-v`, `--version` | Displays the installer version and the project release it belongs to. |
+| `-u`, `--update[=<project-tag>]` | Updates the installer from the given project release, or from the main branch if no tag is provided. |
+
+The installer and the project are versioned separately. `--update` expects a **project** release tag, which is the version shown in parentheses by `--version`:
+
+```text
+$ bash-hooks --version
+bash-hooks 0.20.0 (project 0.25.0)
+```
 
 **Build**
 
